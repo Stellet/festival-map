@@ -22,11 +22,8 @@ export function createFilters(container, categories, onSelect) {
 }
 
 export function openDetails(sheet, attraction) {
-  document.querySelector('#detailCategory').textContent = attraction.category;
   document.querySelector('#detailTitle').textContent = attraction.name;
   document.querySelector('#detailDescription').textContent = attraction.description;
-  document.querySelector('#detailAccessibility').textContent = attraction.accessible ? 'Acessível' : 'Não informado';
-  document.querySelector('#detailSchedule').textContent = attraction.schedule ?? 'Não informado';
   sheet.classList.add('is-open');
   sheet.setAttribute('aria-hidden', 'false');
 }

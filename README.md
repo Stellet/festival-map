@@ -30,6 +30,7 @@ Exemplos: VS Code Live Server ou qualquer servidor HTTP estático. Todos os cami
 - Pontos vinculados obrigatoriamente a áreas editáveis, com contenção e posição relativa preservada.
 - Filtros gerados dinamicamente apenas para tipos presentes no estado.
 - Painel de detalhes e botão “Como chegar”.
+- Resumo com descrição em duas linhas e camada “Mais detalhes” com dados completos e links externos.
 - Zoom por botões, roda do mouse e pinça.
 - Arraste por mouse ou toque, com limites de pan.
 - Enquadramento responsivo para desktop e celular.
@@ -38,6 +39,7 @@ Exemplos: VS Code Live Server ou qualquer servidor HTTP estático. Todos os cami
 - Marcador “Você está aqui” arrastável também no modo normal, com posição persistida localmente.
 - Modo debug ativável pelo botão ou por `?debug=true`.
 - Criação visual por drag and drop, exclusão e posicionamento local de pontos de interesse.
+- Edição em memória de descrições, categorias, horários, localização complementar e links de pontos e áreas.
 - Visualização debug dos nós e conexões.
 - Edição em memória de nós, conexões, tipos e pontos de controle da malha.
 - Camada opcional de planta baixa ajustável no debug, sem imagem incluída no projeto.

@@ -1,4 +1,4 @@
-import { loadAttractions, POINT_TYPES, getTypesInState } from './attractions.js';
+import { loadAttractions, POINT_TYPES, getPointType, getTypesInState } from './attractions.js';
 import { MapController } from './map-controller.js';
 import {
   navigationNodes, navigationEdges, findNearestNavigationNode, findShortestPath,
@@ -9,8 +9,8 @@ import { renderTypeFilters, openDetails, closeDetails } from './ui.js';
 import { loadAreas, findContainingArea, clampPointToArea, synchronizeAreaMemberships } from './areas.js';
 
 const APP_VERSION = {
-  number: '0.1.20',
-  updatedAt: '03/08/2026 · 08:04'
+  number: '0.1.21',
+  updatedAt: '03/08/2026 · 08:40'
 };
 
 let debugMode = new URLSearchParams(window.location.search).get('debug') === 'true';
@@ -20,6 +20,7 @@ const mapObject = document.querySelector('#festivalMap');
 const detailSheet = document.querySelector('#detailSheet');
 const status = document.querySelector('#mapStatus');
 const searchInput = document.querySelector('#searchInput');
+const fullDetailSheet = document.querySelector('#fullDetailSheet');
 
 const mapController = new MapController(viewport);
 let attractions = [];
@@ -40,7 +41,18 @@ let floorPlanUrl = null;
 const floorPlan = { x: 0, y: 0, scale: 1, opacity: 0.5 };
 let currentLocationDrag = null;
 let isDraggingCurrentLocation = false;
+let creatingPoint = true;
 const CURRENT_LOCATION_STORAGE_KEY = 'festival-map.current-location';
+const EXTERNAL_LINK_TYPES = [
+  { id: 'site', label: 'Site', icon: '↗' },
+  { id: 'instagram', label: 'Instagram', icon: '◎' },
+  { id: 'facebook', label: 'Facebook', icon: 'f' },
+  { id: 'youtube', label: 'YouTube', icon: '▶' },
+  { id: 'tiktok', label: 'TikTok', icon: '♪' },
+  { id: 'twitter', label: 'X/Twitter', icon: '𝕏' },
+  { id: 'whatsapp', label: 'WhatsApp', icon: '☏' },
+  { id: 'other', label: 'Outro link', icon: '↗' }
+];
 
 const MARKER_COLORS = {
   'main-stage': '#8b5cf6', 'alternative-stage': '#fb7185', 'food-court': '#d99f08',
@@ -222,6 +234,18 @@ function snapCurrentLocationToNearest() {
   if (nearest) setCurrentLocation(nearest.id);
 }
 
+function setPointEditorFields(point) {
+  document.querySelector('#debugName').value = point?.name ?? '';
+  document.querySelector('#debugPointDescription').value = point?.description ?? '';
+  document.querySelector('#debugPointCategory').value = point?.categoryLabel ?? '';
+  document.querySelector('#debugPointSchedule').value = point?.schedule ?? '';
+  document.querySelector('#debugPointLocation').value = point?.complementaryLocation ?? '';
+  EXTERNAL_LINK_TYPES.forEach(({ id }) => {
+    const fieldId = `#debugLink${id[0].toUpperCase()}${id.slice(1)}`;
+    document.querySelector(fieldId).value = point?.links?.[id] ?? '';
+  });
+}
+
 function selectDebugAttraction(attraction) {
   debugSelection = attraction;
   svgDocument.querySelectorAll('.attraction').forEach((node) => node.classList.remove('debug-selected'));
@@ -231,10 +255,12 @@ function selectDebugAttraction(attraction) {
     document.querySelector('#debugPointArea').value = '';
     return;
   }
+  creatingPoint = false;
   svgDocument.querySelector(`[data-attraction-id="${attraction.id}"]`)?.classList.add('debug-selected');
   document.querySelector('#debugAttractionList').value = attraction.id;
   document.querySelector('#debugDelete').disabled = attraction.id === 'you-are-here';
   document.querySelector('#debugPointArea').value = attraction.areaId;
+  setPointEditorFields(attraction);
 }
 
 function refreshAttractionList() {
@@ -531,6 +557,10 @@ function initializeAttractionDropCreator() {
     button.addEventListener('pointerdown', (event) => {
       if (!debugMode || event.button > 0) return;
       event.preventDefault();
+      if (!creatingPoint) {
+        message.textContent = 'Clique em “Novo ponto” antes de criar.';
+        return;
+      }
       const name = nameInput.value.trim();
       if (!name) {
         message.textContent = 'Informe um nome antes de arrastar.';
@@ -572,13 +602,19 @@ function initializeAttractionDropCreator() {
         const attraction = {
           id: `custom-${Date.now()}`,
           name,
-          description: type.description,
+          description: document.querySelector('#debugPointDescription').value.trim() || type.description,
           type: type.id,
           icon: type.icon,
           color: type.color,
           category: type.category,
+          categoryLabel: document.querySelector('#debugPointCategory').value.trim() || type.label,
           accessible: false,
-          schedule: 'Não informado',
+          schedule: document.querySelector('#debugPointSchedule').value.trim(),
+          complementaryLocation: document.querySelector('#debugPointLocation').value.trim(),
+          links: Object.fromEntries(EXTERNAL_LINK_TYPES.map(({ id }) => {
+            const fieldId = `#debugLink${id[0].toUpperCase()}${id.slice(1)}`;
+            return [id, document.querySelector(fieldId).value.trim()];
+          })),
           navigationNodeId: null,
           areaId: area.id,
           x: Math.round(point.x),
@@ -590,7 +626,6 @@ function initializeAttractionDropCreator() {
         refreshAttractionList();
         refreshTypeFilters();
         selectDebugAttraction(attraction);
-        nameInput.value = '';
         message.textContent = `${attraction.name} adicionado.`;
       };
       const cancel = (pointerEvent) => {
@@ -615,6 +650,10 @@ function populateAreaFields(area) {
   document.querySelector('#debugAreaY').value = area?.y ?? '';
   document.querySelector('#debugAreaWidth').value = area?.width ?? '';
   document.querySelector('#debugAreaHeight').value = area?.height ?? '';
+  document.querySelector('#debugAreaDescription').value = area?.description ?? '';
+  document.querySelector('#debugAreaInfo').value = area?.additionalInfo ?? '';
+  document.querySelector('#debugAreaSite').value = area?.links?.site ?? '';
+  document.querySelector('#debugAreaOtherLink').value = area?.links?.other ?? '';
   renderAreas();
 }
 
@@ -669,6 +708,22 @@ function initializeAreaEditor(svgRoot) {
     areaList.selectedOptions[0].textContent = selectedArea.name;
     pointAreaList.querySelector(`[value="${selectedArea.id}"]`).textContent = selectedArea.name;
     renderAreas();
+  });
+  const areaTextFields = {
+    debugAreaDescription: 'description',
+    debugAreaInfo: 'additionalInfo'
+  };
+  Object.entries(areaTextFields).forEach(([id, property]) => {
+    document.querySelector(`#${id}`).addEventListener('input', (event) => {
+      if (selectedArea) selectedArea[property] = event.target.value;
+    });
+  });
+  [['debugAreaSite', 'site'], ['debugAreaOtherLink', 'other']].forEach(([id, property]) => {
+    document.querySelector(`#${id}`).addEventListener('input', (event) => {
+      if (!selectedArea) return;
+      selectedArea.links ??= {};
+      selectedArea.links[property] = event.target.value;
+    });
   });
   const updateAreaGeometry = () => {
     if (!selectedArea) return;
@@ -744,8 +799,6 @@ function initializeEditor(svgRoot) {
       debugDrag = null;
       meshDrag = null;
       areaDrag = null;
-    } else if (!debugSelection && attractions.length) {
-      selectDebugAttraction(attractions[0]);
     }
   };
 
@@ -801,6 +854,38 @@ function initializeEditor(svgRoot) {
   });
   toggle.addEventListener('click', () => setDebugMode(!debugMode));
   list.addEventListener('change', () => selectDebugAttraction(attractions.find((item) => item.id === list.value)));
+  document.querySelector('#debugNewPoint').addEventListener('click', () => {
+    creatingPoint = true;
+    selectDebugAttraction(null);
+    setPointEditorFields(null);
+    document.querySelector('#debugName').focus();
+  });
+  const pointFieldMap = {
+    debugName: 'name',
+    debugPointDescription: 'description',
+    debugPointCategory: 'categoryLabel',
+    debugPointSchedule: 'schedule',
+    debugPointLocation: 'complementaryLocation'
+  };
+  Object.entries(pointFieldMap).forEach(([id, property]) => {
+    document.querySelector(`#${id}`).addEventListener('input', (event) => {
+      if (!debugSelection || creatingPoint) return;
+      debugSelection[property] = event.target.value;
+      if (property === 'name') {
+        updateAttractionContent(debugSelection);
+        refreshAttractionList();
+      }
+      if (selectedAttraction?.id === debugSelection.id) selectedAttraction = debugSelection;
+    });
+  });
+  EXTERNAL_LINK_TYPES.forEach(({ id }) => {
+    const fieldId = `#debugLink${id[0].toUpperCase()}${id.slice(1)}`;
+    document.querySelector(fieldId).addEventListener('input', (event) => {
+      if (!debugSelection || creatingPoint) return;
+      debugSelection.links ??= {};
+      debugSelection.links[id] = event.target.value;
+    });
+  });
 
   document.querySelector('#debugDelete').addEventListener('click', () => {
     if (!debugSelection) return;
@@ -816,6 +901,8 @@ function initializeEditor(svgRoot) {
     refreshAttractionList();
     refreshTypeFilters();
     selectDebugAttraction(null);
+    creatingPoint = true;
+    setPointEditorFields(null);
     document.querySelector('#debugStatus').textContent = 'Ponto de interesse excluído.';
   });
 
@@ -835,6 +922,7 @@ function initializeEditor(svgRoot) {
 }
 
 function selectAttraction(attraction) {
+  closeFullDetails();
   selectedAttraction = attraction;
   svgDocument.querySelectorAll('.attraction').forEach((node) => node.classList.remove('selected'));
   svgDocument.querySelector(`[data-id="${attraction.id}"]`)?.classList.add('selected');
@@ -844,7 +932,60 @@ function selectAttraction(attraction) {
 }
 
 function closeAttractionDetails() {
+  closeFullDetails();
   closeDetails(detailSheet);
+}
+
+function closeFullDetails(restoreFocus = false) {
+  const wasOpen = fullDetailSheet.classList.contains('is-open');
+  fullDetailSheet.classList.remove('is-open');
+  fullDetailSheet.setAttribute('aria-hidden', 'true');
+  if (wasOpen && restoreFocus) document.querySelector('#moreDetailsButton').focus();
+}
+
+function getSafeExternalUrl(value) {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    return ['http:', 'https:'].includes(url.protocol) ? url.href : null;
+  } catch {
+    return null;
+  }
+}
+
+function openFullDetails() {
+  if (!selectedAttraction) return;
+  const area = getArea(selectedAttraction.areaId);
+  const type = getPointType(selectedAttraction.type);
+  document.querySelector('#fullDetailTitle').textContent = selectedAttraction.name;
+  document.querySelector('#fullDetailDescription').textContent = selectedAttraction.description;
+  document.querySelector('#fullDetailArea').textContent = area?.name ?? 'Área não informada';
+  document.querySelector('#fullDetailCategory').textContent = selectedAttraction.categoryLabel ?? type?.label ?? 'Não informada';
+  const scheduleRow = document.querySelector('#fullDetailScheduleRow');
+  scheduleRow.hidden = !selectedAttraction.schedule;
+  document.querySelector('#fullDetailSchedule').textContent = selectedAttraction.schedule || '';
+  const locationRow = document.querySelector('#fullDetailLocationRow');
+  locationRow.hidden = !selectedAttraction.complementaryLocation;
+  document.querySelector('#fullDetailLocation').textContent = selectedAttraction.complementaryLocation || '';
+  const links = document.querySelector('#fullDetailLinks');
+  links.replaceChildren();
+  const availableLinks = { ...area?.links, ...selectedAttraction.links };
+  EXTERNAL_LINK_TYPES.forEach(({ id, label, icon }) => {
+    const href = getSafeExternalUrl(availableLinks[id]);
+    if (!href) return;
+    const anchor = document.createElement('a');
+    anchor.className = 'external-link';
+    anchor.href = href;
+    anchor.target = '_blank';
+    anchor.rel = 'noopener noreferrer';
+    anchor.setAttribute('aria-label', `Abrir ${label} em uma nova aba`);
+    anchor.innerHTML = `<span aria-hidden="true">${icon}</span><span class="sr-only">${label}</span>`;
+    links.appendChild(anchor);
+  });
+  links.hidden = !links.childElementCount;
+  fullDetailSheet.classList.add('is-open');
+  fullDetailSheet.setAttribute('aria-hidden', 'false');
+  document.querySelector('#backDetailsButton').focus();
 }
 
 function bindMapAttractions() {
@@ -919,10 +1060,18 @@ async function init() {
   document.querySelector('#zoomOutButton').addEventListener('click', () => mapController.zoomBy(1 / 1.2));
   document.querySelector('#resetViewButton').addEventListener('click', () => mapController.fitMapToViewport());
   document.querySelector('#closeSheetButton').addEventListener('click', closeAttractionDetails);
+  document.querySelector('#moreDetailsButton').addEventListener('click', openFullDetails);
+  document.querySelector('#backDetailsButton').addEventListener('click', () => closeFullDetails(true));
   document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && detailSheet.classList.contains('is-open')) closeAttractionDetails();
+    if (event.key !== 'Escape') return;
+    if (fullDetailSheet.classList.contains('is-open')) closeFullDetails(true);
+    else if (detailSheet.classList.contains('is-open')) closeAttractionDetails();
   });
   document.addEventListener('pointerdown', (event) => {
+    if (fullDetailSheet.classList.contains('is-open')) {
+      if (!fullDetailSheet.contains(event.target)) closeFullDetails();
+      return;
+    }
     if (detailSheet.classList.contains('is-open') && !detailSheet.contains(event.target)) closeAttractionDetails();
   });
   document.querySelector('#routeButton').addEventListener('click', () => {

@@ -20,7 +20,7 @@
           <h1>Festival Sesc in Shock</h1>
         </div>
         <div class="header-actions">
-          <button id="debugToggle" class="debug-toggle" type="button" aria-pressed="false">Debug</button>
+          <button id="debugToggle" class="debug-toggle" type="button" aria-pressed="false">Edição</button>
           <button id="resetViewButton" class="icon-button" type="button" aria-label="Restaurar mapa">↺</button>
         </div>
       </div>
@@ -30,17 +30,39 @@
           <button id="debugCollapse" type="button" aria-expanded="true">Recolher</button>
         </div>
         <label>Nome<input id="debugName" type="text" placeholder="Nome do ponto de interesse" /></label>
+        <details class="debug-point-editor">
+          <summary>Dados do ponto</summary>
+          <label>Descrição<textarea id="debugPointDescription" rows="3"></textarea></label>
+          <label>Categoria<input id="debugPointCategory" type="text" /></label>
+          <label>Horário<input id="debugPointSchedule" type="text" /></label>
+          <label>Localização complementar<input id="debugPointLocation" type="text" /></label>
+          <div class="debug-editor-fields debug-link-fields">
+            <label>Site<input id="debugLinkSite" type="url" /></label>
+            <label>Instagram<input id="debugLinkInstagram" type="url" /></label>
+            <label>Facebook<input id="debugLinkFacebook" type="url" /></label>
+            <label>YouTube<input id="debugLinkYoutube" type="url" /></label>
+            <label>TikTok<input id="debugLinkTiktok" type="url" /></label>
+            <label>X/Twitter<input id="debugLinkTwitter" type="url" /></label>
+            <label>WhatsApp<input id="debugLinkWhatsapp" type="url" /></label>
+            <label>Outro link<input id="debugLinkOther" type="url" /></label>
+          </div>
+        </details>
         <div id="debugTypeList" class="debug-type-list" aria-label="Tipos de ponto de interesse"></div>
         <p class="debug-hint">Arraste um tipo até o mapa para criar.</p>
         <label>Ponto selecionado<select id="debugAttractionList"></select></label>
         <label>Área do ponto<select id="debugPointArea"></select></label>
         <div class="debug-actions">
+          <button id="debugNewPoint" type="button">Novo ponto</button>
           <button id="debugDelete" type="button">Excluir</button>
         </div>
         <details class="debug-area-editor">
           <summary>Editar áreas</summary>
           <label>Área<select id="debugAreaList"></select></label>
           <label>Nome<input id="debugAreaName" type="text" /></label>
+          <label>Descrição geral<textarea id="debugAreaDescription" rows="3"></textarea></label>
+          <label>Informações complementares<textarea id="debugAreaInfo" rows="2"></textarea></label>
+          <label>Site relacionado<input id="debugAreaSite" type="url" /></label>
+          <label>Outro link relacionado<input id="debugAreaOtherLink" type="url" /></label>
           <div class="debug-editor-fields">
             <label>X<input id="debugAreaX" type="number" step="1" /></label>
             <label>Y<input id="debugAreaY" type="number" step="1" /></label>
@@ -66,7 +88,7 @@
           <div class="debug-editor-fields">
             <label>Origem<select id="debugConnectionFrom"></select></label>
             <label>Destino<select id="debugConnectionTo"></select></label>
-            <label>Tipo<select id="debugConnectionType"><option value="main-path">main-path</option><option value="corridor">corridor</option><option value="ramp">ramp</option><option value="stairs">stairs</option><option value="building-access">building-access</option></select></label>
+            <label>Tipo<select id="debugConnectionType"><option value="main-path">Percurso principal</option><option value="corridor">Corredor</option><option value="ramp">Rampa</option><option value="stairs">Escada</option><option value="building-access">Acesso à edificação</option></select></label>
             <label>Controle X<input id="debugControlX" type="number" step="1" /></label>
             <label>Controle Y<input id="debugControlY" type="number" step="1" /></label>
           </div>
@@ -103,14 +125,23 @@
     <aside id="detailSheet" class="detail-sheet" aria-hidden="true">
       <div class="sheet-handle" aria-hidden="true"></div>
       <button id="closeSheetButton" class="sheet-close" type="button" aria-label="Fechar detalhes">×</button>
-      <p id="detailCategory" class="detail-category"></p>
       <h2 id="detailTitle"></h2>
-      <p id="detailDescription"></p>
-      <dl class="detail-meta">
-        <div><dt>Acessibilidade</dt><dd id="detailAccessibility"></dd></div>
-        <div><dt>Horário</dt><dd id="detailSchedule"></dd></div>
-      </dl>
+      <p id="detailDescription" class="detail-description-preview"></p>
+      <button id="moreDetailsButton" class="secondary-button" type="button">Mais detalhes</button>
       <button id="routeButton" class="primary-button" type="button">Como chegar</button>
+    </aside>
+
+    <aside id="fullDetailSheet" class="full-detail-sheet" aria-hidden="true" aria-labelledby="fullDetailTitle">
+      <button id="backDetailsButton" class="sheet-back" type="button">← Voltar</button>
+      <h2 id="fullDetailTitle"></h2>
+      <p id="fullDetailDescription"></p>
+      <dl class="full-detail-meta">
+        <div><dt>Área</dt><dd id="fullDetailArea"></dd></div>
+        <div><dt>Categoria</dt><dd id="fullDetailCategory"></dd></div>
+        <div id="fullDetailScheduleRow"><dt>Horário</dt><dd id="fullDetailSchedule"></dd></div>
+        <div id="fullDetailLocationRow"><dt>Localização</dt><dd id="fullDetailLocation"></dd></div>
+      </dl>
+      <nav id="fullDetailLinks" class="external-links" aria-label="Links externos"></nav>
     </aside>
 
   </div>

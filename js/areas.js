@@ -1,7 +1,13 @@
 export async function loadAreas() {
   const response = await fetch('data/areas.json');
   if (!response.ok) throw new Error('Não foi possível carregar as áreas do mapa.');
-  return response.json();
+  const areas = await response.json();
+  return areas.map((area) => ({
+    ...area,
+    description: area.description ?? '',
+    additionalInfo: area.additionalInfo ?? '',
+    links: { site: '', other: '', ...area.links }
+  }));
 }
 
 export function findContainingArea(areas, x, y) {

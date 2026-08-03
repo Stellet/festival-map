@@ -1,5 +1,12 @@
 # Histórico do projeto
 
+## v0.1.21 — Detalhes e conteúdo em PT-BR
+
+- Padronizada a interface visível em português do Brasil.
+- Separado o resumo do ponto de interesse da camada completa de detalhes.
+- Adicionados metadados complementares e links configuráveis para pontos e áreas.
+- Ampliado o editor local para atualizar o conteúdo desses campos em memória.
+
 ## v0.1.17 — Áreas principais
 
 - Criado o modelo inicial de sete áreas editáveis em `data/areas.json`.

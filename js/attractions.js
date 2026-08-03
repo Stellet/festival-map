@@ -33,7 +33,11 @@ export async function loadAttractions() {
       icon: type?.icon ?? point.icon,
       color: type?.color ?? point.color,
       category: point.category ?? type?.category,
-      description: point.description || type?.description || 'Informações em atualização.'
+      categoryLabel: point.categoryLabel ?? type?.label ?? 'Ponto de interesse',
+      description: point.description || type?.description || 'Informações em atualização.',
+      schedule: point.schedule ?? '',
+      complementaryLocation: point.complementaryLocation ?? '',
+      links: { site: '', instagram: '', facebook: '', youtube: '', tiktok: '', twitter: '', whatsapp: '', other: '', ...point.links }
     };
   });
 }
