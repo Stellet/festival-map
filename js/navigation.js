@@ -120,7 +120,7 @@ export function renderCirculationPaths(svgDocument) {
     }
   });
   const content = svgDocument.querySelector('#map-content');
-  const firstOverlay = content.querySelector('#navigation-debug, #active-route, .attraction');
+  const firstOverlay = content.querySelector('#navigation-debug, #active-route, .attraction, #map-labels');
   content.insertBefore(layer, firstOverlay);
   return layer;
 }
@@ -157,26 +157,33 @@ export function findShortestPath(originId, destinationId) {
   return path[0] === originId ? path : null;
 }
 
-export function drawRoute(svgDocument, nodeIds) {
+export function drawRoute(svgDocument, nodeIds, destinationPoint = null, originPoint = null) {
   clearRoute(svgDocument);
   const nodes = nodeIds.map((id) => nodeById.get(id));
   if (!nodes.length) return null;
   const path = svgDocument.createElementNS('http://www.w3.org/2000/svg', 'path');
   path.id = 'active-route';
-  const commands = [`M ${nodes[0].x} ${nodes[0].y}`];
+  const routeOrigin = originPoint ?? nodes[0];
+  const commands = routeOrigin.x === nodes[0].x && routeOrigin.y === nodes[0].y
+    ? [`M ${nodes[0].x} ${nodes[0].y}`]
+    : [`M ${routeOrigin.x} ${routeOrigin.y} L ${nodes[0].x} ${routeOrigin.y} L ${nodes[0].x} ${nodes[0].y}`];
   for (let index = 1; index < nodes.length; index += 1) {
     const fromId = nodeIds[index - 1], toId = nodeIds[index];
     const edge = navigationEdges.find((item) => (item.from === fromId && item.to === toId) || (item.bidirectional && item.from === toId && item.to === fromId));
     commands.push(edge ? edgePath(edge, edge.from !== fromId).replace(/^M[^Q]+Q\s*/, 'Q ') : `L ${nodes[index].x} ${nodes[index].y}`);
   }
+  const lastNode = nodes.at(-1);
+  if (destinationPoint && (destinationPoint.x !== lastNode.x || destinationPoint.y !== lastNode.y)) {
+    commands.push(`L ${lastNode.x} ${destinationPoint.y} L ${destinationPoint.x} ${destinationPoint.y}`);
+  }
   path.setAttribute('d', commands.join(' '));
-  const content = svgDocument.querySelector('#map-content'), firstAttraction = content.querySelector('.attraction');
-  content.insertBefore(path, firstAttraction);
+  const content = svgDocument.querySelector('#map-content'), firstOverlay = content.querySelector('.attraction, #map-labels');
+  content.insertBefore(path, firstOverlay);
   const origin = svgDocument.createElementNS('http://www.w3.org/2000/svg', 'circle');
-  origin.id = 'route-origin-marker'; origin.setAttribute('cx', nodes[0].x); origin.setAttribute('cy', nodes[0].y); origin.setAttribute('r', 14);
+  origin.id = 'route-origin-marker'; origin.setAttribute('cx', routeOrigin.x); origin.setAttribute('cy', routeOrigin.y); origin.setAttribute('r', 9);
   const destination = svgDocument.createElementNS('http://www.w3.org/2000/svg', 'circle');
-  destination.id = 'route-destination-marker'; destination.setAttribute('cx', nodes.at(-1).x); destination.setAttribute('cy', nodes.at(-1).y); destination.setAttribute('r', 14);
-  content.insertBefore(origin, firstAttraction); content.insertBefore(destination, firstAttraction);
+  destination.id = 'route-destination-marker'; destination.setAttribute('cx', destinationPoint?.x ?? lastNode.x); destination.setAttribute('cy', destinationPoint?.y ?? lastNode.y); destination.setAttribute('r', 9);
+  content.insertBefore(origin, firstOverlay); content.insertBefore(destination, firstOverlay);
   return path;
 }
 
@@ -195,16 +202,16 @@ export function renderNavigationGraph(svgDocument, visible) {
     path.setAttribute('d', edgePath(edge)); path.dataset.navigationEdgeId = edge.id;
     layer.appendChild(path);
     const control = svgDocument.createElementNS('http://www.w3.org/2000/svg', 'circle');
-    control.setAttribute('cx', edge.control[0]); control.setAttribute('cy', edge.control[1]); control.setAttribute('r', 7);
+    control.setAttribute('cx', edge.control[0]); control.setAttribute('cy', edge.control[1]); control.setAttribute('r', 5);
     control.dataset.navigationControlId = edge.id; layer.appendChild(control);
   });
   navigationNodes.forEach((node) => {
     const circle = svgDocument.createElementNS('http://www.w3.org/2000/svg', 'circle');
-    circle.setAttribute('cx', node.x); circle.setAttribute('cy', node.y); circle.setAttribute('r', 9);
+    circle.setAttribute('cx', node.x); circle.setAttribute('cy', node.y); circle.setAttribute('r', 6);
     circle.dataset.navigationNodeId = node.id; layer.appendChild(circle);
   });
   const content = svgDocument.querySelector('#map-content');
-  content.insertBefore(layer, content.querySelector('#active-route, .attraction'));
+  content.insertBefore(layer, content.querySelector('#active-route, .attraction, #map-labels'));
   layer.classList.toggle('is-visible', visible);
   return layer;
 }

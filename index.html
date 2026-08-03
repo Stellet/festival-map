@@ -16,8 +16,8 @@
     <header class="app-header">
       <div class="header-main">
         <div>
-          <p class="eyebrow">Festival Sesc in Shock</p>
-          <h1>Mapa interativo</h1>
+          <p class="eyebrow">Mapa Interativo</p>
+          <h1>Festival Sesc in Shock</h1>
         </div>
         <div class="header-actions">
           <button id="debugToggle" class="debug-toggle" type="button" aria-pressed="false">Debug</button>
@@ -33,9 +33,32 @@
         <div id="debugTypeList" class="debug-type-list" aria-label="Tipos de ponto de interesse"></div>
         <p class="debug-hint">Arraste um tipo até o mapa para criar.</p>
         <label>Ponto selecionado<select id="debugAttractionList"></select></label>
+        <label>Área do ponto<select id="debugPointArea"></select></label>
         <div class="debug-actions">
           <button id="debugDelete" type="button">Excluir</button>
         </div>
+        <details class="debug-area-editor">
+          <summary>Editar áreas</summary>
+          <label>Área<select id="debugAreaList"></select></label>
+          <label>Nome<input id="debugAreaName" type="text" /></label>
+          <div class="debug-editor-fields">
+            <label>X<input id="debugAreaX" type="number" step="1" /></label>
+            <label>Y<input id="debugAreaY" type="number" step="1" /></label>
+            <label>Largura<input id="debugAreaWidth" type="number" min="80" step="1" /></label>
+            <label>Altura<input id="debugAreaHeight" type="number" min="80" step="1" /></label>
+          </div>
+        </details>
+        <details class="debug-floor-editor">
+          <summary>Planta baixa opcional</summary>
+          <label>Imagem<input id="debugFloorFile" type="file" accept="image/*" /></label>
+          <div class="debug-editor-fields">
+            <label>X<input id="debugFloorX" type="number" step="1" value="0" /></label>
+            <label>Y<input id="debugFloorY" type="number" step="1" value="0" /></label>
+            <label>Escala<input id="debugFloorScale" type="number" min="0.1" step="0.1" value="1" /></label>
+            <label>Opacidade<input id="debugFloorOpacity" type="number" min="0" max="1" step="0.05" value="0.5" /></label>
+          </div>
+          <button id="debugFloorRemove" type="button">Remover planta</button>
+        </details>
         <details class="debug-mesh-editor">
           <summary>Editar malha de circulação</summary>
           <label>Você está aqui<select id="debugOriginNode"></select></label>

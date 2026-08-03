@@ -3,31 +3,43 @@
   <desc id="description">Mapa vetorial com atrações e malha de circulação navegável.</desc>
   <style>
     [class^="circulation-"], .street-floor, .street-line, .corridor-floor, .corridor-line { fill: none; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
-    .circulation-main-path-floor, .circulation-main-floor, .street-floor { stroke: #0b0d12; stroke-width: 42; }
-    .circulation-main-path-line, .circulation-main-line, .street-line { stroke: #596174; stroke-width: 17; }
-    .circulation-ramp-floor { stroke: #10131a; stroke-width: 30; }
-    .circulation-ramp-line { stroke: #596174; stroke-width: 11; }
-    .circulation-corridor-floor, .circulation-stairs-floor, .circulation-building-access-floor, .corridor-floor { stroke: #10131a; stroke-width: 22; }
-    .circulation-corridor-line, .circulation-stairs-line, .circulation-building-access-line, .corridor-line { stroke: #454c5e; stroke-width: 7; }
-    .circulation-stairs-steps { fill: none; stroke: #a8afc3; stroke-width: 4; stroke-linecap: square; pointer-events: none; }
+    .circulation-main-path-floor, .circulation-main-floor, .street-floor { stroke: #0b0d12; stroke-width: 26; }
+    .circulation-main-path-line, .circulation-main-line, .street-line { stroke: #596174; stroke-width: 10; }
+    .circulation-ramp-floor { stroke: #10131a; stroke-width: 20; }
+    .circulation-ramp-line { stroke: #596174; stroke-width: 7; }
+    .circulation-corridor-floor, .circulation-stairs-floor, .circulation-building-access-floor, .corridor-floor { stroke: #10131a; stroke-width: 14; }
+    .circulation-corridor-line, .circulation-stairs-line, .circulation-building-access-line, .corridor-line { stroke: #454c5e; stroke-width: 4; }
+    .circulation-stairs-steps { fill: none; stroke: #a8afc3; stroke-width: 2; stroke-linecap: square; pointer-events: none; }
+    #floor-plan-layer { pointer-events: none; }
+    .map-area-shape { fill-opacity: .4; stroke: none; pointer-events: none; }
+    #map-labels { pointer-events: none; }
+    .map-area-label { font-family: Inter, ui-sans-serif, system-ui, sans-serif; font-size: 11px; font-weight: 700; fill: #f0f2f8; stroke-width: 2.5; stroke-opacity: .72; paint-order: stroke; stroke-linejoin: round; text-anchor: middle; pointer-events: none; }
+    svg.debug-mode .map-area-shape { pointer-events: all; cursor: move; stroke: #22d3ee; stroke-width: 1.5; stroke-dasharray: 6 6; }
+    svg.debug-mode .map-area.is-selected .map-area-shape { stroke: #facc15; stroke-width: 3; }
     .attraction { cursor: pointer; transition: opacity .15s ease; }
     .attraction:hover { opacity: .85; }
-    .attraction-label { font-family: Inter, ui-sans-serif, system-ui, sans-serif; font-size: 20px; font-weight: 700; fill: #f5f7ff; stroke: #181b24; stroke-width: 4; paint-order: stroke; text-anchor: middle; pointer-events: none; user-select: none; }
+    .attraction-label { font-family: Inter, ui-sans-serif, system-ui, sans-serif; font-size: 14px; font-weight: 700; fill: #f5f7ff; stroke: #181b24; stroke-width: 2.5; stroke-opacity: .82; stroke-linejoin: round; paint-order: stroke; text-anchor: middle; pointer-events: none; user-select: none; }
     .attraction-hit-area { fill: transparent; pointer-events: all; cursor: pointer; }
-    .attraction-marker { stroke: #ffffff; stroke-width: 4; cursor: pointer; }
-    .attraction-icon { font-family: Arial, sans-serif; font-size: 18px; font-weight: 700; fill: #ffffff; text-anchor: middle; dominant-baseline: central; pointer-events: none; user-select: none; }
-    .selected .attraction-marker { stroke: #22d3ee; stroke-width: 8; }
-    .debug-selected .attraction-marker { stroke: #facc15; stroke-width: 9; }
+    .attraction-marker { stroke: #ffffff; stroke-width: 2.5; cursor: pointer; }
+    .attraction-icon { font-family: Arial, sans-serif; font-size: 13px; font-weight: 700; fill: #ffffff; text-anchor: middle; dominant-baseline: central; pointer-events: none; user-select: none; }
+    .current-location .attraction-marker { stroke: #22d3ee; stroke-width: 4; filter: drop-shadow(0 0 5px #22d3ee); }
+    .current-location, .current-location .attraction-hit-area, .current-location .attraction-marker { cursor: grab; }
+    .current-location.is-location-dragging, .current-location.is-location-dragging .attraction-hit-area, .current-location.is-location-dragging .attraction-marker { cursor: grabbing; }
+    .current-location.is-location-dragging .attraction-marker { stroke: #facc15; stroke-width: 5; filter: drop-shadow(0 0 7px #facc15); }
+    .current-location-text .attraction-icon { font-size: 15px; }
+    .current-location-text .attraction-label { font-size: 15px; fill: #ffffff; }
+    .selected .attraction-marker { stroke: #22d3ee; stroke-width: 4.5; }
+    .debug-selected .attraction-marker { stroke: #facc15; stroke-width: 5; }
     .debug-dragging { opacity: .72; }
     .hidden { display: none; }
-    #active-route { fill: none; stroke: #ffffff; stroke-width: 13; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 0 7px #22d3ee); pointer-events: none; }
-    #route-origin-marker { fill: #22d3ee; stroke: #ffffff; stroke-width: 5; pointer-events: none; }
-    #route-destination-marker { fill: #fb7185; stroke: #ffffff; stroke-width: 5; pointer-events: none; }
+    #active-route { fill: none; stroke: #ffffff; stroke-width: 8; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 0 4px #22d3ee); pointer-events: none; }
+    #route-origin-marker { fill: #22d3ee; stroke: #ffffff; stroke-width: 3; pointer-events: none; }
+    #route-destination-marker { fill: #fb7185; stroke: #ffffff; stroke-width: 3; pointer-events: none; }
     #navigation-debug { display: none; pointer-events: none; }
     #navigation-debug.is-visible { display: block; }
-    #navigation-debug path { fill: none; stroke: #f5f7ff; stroke-width: 7; stroke-dasharray: 8 7; opacity: .6; pointer-events: stroke; cursor: pointer; }
-    #navigation-debug path.is-selected { stroke: #fb7185; stroke-width: 11; opacity: 1; }
-    #navigation-debug circle { stroke: #0f1117; stroke-width: 3; pointer-events: all; cursor: crosshair; }
+    #navigation-debug path { fill: none; stroke: #f5f7ff; stroke-width: 4; stroke-dasharray: 6 6; opacity: .6; pointer-events: stroke; cursor: pointer; }
+    #navigation-debug path.is-selected { stroke: #fb7185; stroke-width: 6; opacity: 1; }
+    #navigation-debug circle { stroke: #0f1117; stroke-width: 1.5; pointer-events: all; cursor: crosshair; }
     #navigation-debug [data-navigation-node-id] { fill: #facc15; }
     #navigation-debug [data-navigation-control-id] { fill: #22d3ee; }
     svg, #map-content, #map-content * { touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
@@ -37,6 +49,6 @@
   </style>
   <g id="map-content" transform="translate(0 0) scale(1)">
     <rect width="760" height="1100" fill="#0f1117" />
-    <rect x="35" y="35" width="690" height="1030" rx="42" fill="#181b24" stroke="#34394a" stroke-width="10" />
+    <rect x="35" y="35" width="690" height="1030" rx="42" fill="#181b24" stroke="#34394a" stroke-width="4" />
   </g>
 </svg>

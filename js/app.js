@@ -6,10 +6,11 @@ import {
   drawRoute, clearRoute, renderNavigationGraph, renderCirculationPaths
 } from './navigation.js';
 import { renderTypeFilters, openDetails, closeDetails } from './ui.js';
+import { loadAreas, findContainingArea, clampPointToArea, synchronizeAreaMemberships } from './areas.js';
 
 const APP_VERSION = {
-  number: '0.1.16',
-  updatedAt: '03/08/2026 · 00:08'
+  number: '0.1.20',
+  updatedAt: '03/08/2026 · 08:04'
 };
 
 let debugMode = new URLSearchParams(window.location.search).get('debug') === 'true';
@@ -22,6 +23,7 @@ const searchInput = document.querySelector('#searchInput');
 
 const mapController = new MapController(viewport);
 let attractions = [];
+let areas = [];
 let selectedAttraction = null;
 let svgDocument = null;
 let activeType = 'all';
@@ -32,6 +34,13 @@ let meshDrag = null;
 let selectedNavigationEdgeId = null;
 let currentLocationNodeId = null;
 let activeDestination = null;
+let selectedArea = null;
+let areaDrag = null;
+let floorPlanUrl = null;
+const floorPlan = { x: 0, y: 0, scale: 1, opacity: 0.5 };
+let currentLocationDrag = null;
+let isDraggingCurrentLocation = false;
+const CURRENT_LOCATION_STORAGE_KEY = 'festival-map.current-location';
 
 const MARKER_COLORS = {
   'main-stage': '#8b5cf6', 'alternative-stage': '#fb7185', 'food-court': '#d99f08',
@@ -40,43 +49,169 @@ const MARKER_COLORS = {
 };
 
 const EDITABLE_POINT_TYPES = POINT_TYPES.filter((type) => !type.system);
+const AREA_COLORS = {
+  'main-stage-area': '#55436b',
+  'creative-area': '#36546b',
+  'experience-area': '#4e4567',
+  'services-area': '#315b5d',
+  'activities-area': '#655442',
+  'food-area': '#4d6047',
+  'access-area': '#65474f'
+};
 
 function updateAttractionPosition(attraction) {
   const element = svgDocument.querySelector(`[data-attraction-id="${attraction.id}"]`);
   element?.setAttribute('transform', `translate(${attraction.x} ${attraction.y})`);
+  const textGroup = svgDocument.querySelector(`[data-point-text-id="${attraction.id}"]`);
+  textGroup?.setAttribute('transform', `translate(${attraction.x} ${attraction.y})`);
+}
+
+function ensureMapLabelsLayer() {
+  const content = svgDocument.querySelector('#map-content');
+  let layer = svgDocument.querySelector('#map-labels');
+  if (!layer) {
+    layer = svgDocument.createElementNS('http://www.w3.org/2000/svg', 'g');
+    layer.id = 'map-labels';
+    layer.setAttribute('aria-hidden', 'true');
+  }
+  content.appendChild(layer);
+  return layer;
+}
+
+function getArea(areaId) {
+  return areas.find((area) => area.id === areaId) ?? null;
+}
+
+function persistCurrentLocation(marker) {
+  try {
+    localStorage.setItem(CURRENT_LOCATION_STORAGE_KEY, JSON.stringify({
+      x: marker.x,
+      y: marker.y,
+      navigationNodeId: currentLocationNodeId
+    }));
+  } catch { /* Persistência pode estar indisponível em modo privado. */ }
+}
+
+function restoreCurrentLocation(marker) {
+  try {
+    const saved = JSON.parse(localStorage.getItem(CURRENT_LOCATION_STORAGE_KEY));
+    if (!saved || !Number.isFinite(saved.x) || !Number.isFinite(saved.y)) return;
+    marker.x = Math.min(739, Math.max(21, saved.x));
+    marker.y = Math.min(1079, Math.max(21, saved.y));
+    if (navigationNodes.some((node) => node.id === saved.navigationNodeId)) marker.navigationNodeId = saved.navigationNodeId;
+  } catch { /* Mantém a posição original quando o estado não é válido. */ }
+}
+
+function renderFloorPlan() {
+  svgDocument.querySelector('#floor-plan-layer')?.remove();
+  if (!floorPlanUrl) return;
+  const image = svgDocument.createElementNS('http://www.w3.org/2000/svg', 'image');
+  image.id = 'floor-plan-layer';
+  image.setAttribute('href', floorPlanUrl);
+  image.setAttribute('x', floorPlan.x);
+  image.setAttribute('y', floorPlan.y);
+  image.setAttribute('width', 760);
+  image.setAttribute('height', 1100);
+  image.setAttribute('opacity', floorPlan.opacity);
+  image.setAttribute('transform', `translate(${floorPlan.x} ${floorPlan.y}) scale(${floorPlan.scale}) translate(${-floorPlan.x} ${-floorPlan.y})`);
+  const content = svgDocument.querySelector('#map-content');
+  content.insertBefore(image, content.children[2] ?? null);
+}
+
+function renderAreas() {
+  svgDocument.querySelector('#map-areas')?.remove();
+  svgDocument.querySelector('#area-labels')?.remove();
+  const layer = svgDocument.createElementNS('http://www.w3.org/2000/svg', 'g');
+  layer.id = 'map-areas';
+  const labelLayer = svgDocument.createElementNS('http://www.w3.org/2000/svg', 'g');
+  labelLayer.id = 'area-labels';
+  areas.forEach((area) => {
+    const group = svgDocument.createElementNS('http://www.w3.org/2000/svg', 'g');
+    group.classList.add('map-area');
+    group.dataset.areaId = area.id;
+    group.classList.toggle('is-selected', area.id === selectedArea?.id);
+    const shape = svgDocument.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    shape.classList.add('map-area-shape');
+    shape.setAttribute('x', area.x); shape.setAttribute('y', area.y);
+    shape.setAttribute('width', area.width); shape.setAttribute('height', area.height); shape.setAttribute('rx', 18);
+    shape.setAttribute('fill', AREA_COLORS[area.id] ?? '#465064');
+    const label = svgDocument.createElementNS('http://www.w3.org/2000/svg', 'text');
+    label.classList.add('map-area-label');
+    label.setAttribute('x', area.x + area.width / 2); label.setAttribute('y', area.y + 22);
+    label.setAttribute('stroke', AREA_COLORS[area.id] ?? '#465064');
+    label.textContent = area.name.toUpperCase();
+    group.appendChild(shape); layer.appendChild(group); labelLayer.appendChild(label);
+  });
+  const content = svgDocument.querySelector('#map-content');
+  content.insertBefore(layer, content.querySelector('#circulation-paths, #navigation-debug, #active-route, .attraction'));
+  ensureMapLabelsLayer().prepend(labelLayer);
+}
+
+function moveOrResizeArea(area, next) {
+  const previous = { x: area.x, y: area.y, width: area.width, height: area.height };
+  const pointPositions = attractions.filter((point) => point.areaId === area.id).map((point) => ({
+    point,
+    relativeX: previous.width ? (point.x - previous.x) / previous.width : 0.5,
+    relativeY: previous.height ? (point.y - previous.y) / previous.height : 0.5
+  }));
+  const areaNodeIds = [...new Set([...area.entryNodeIds, ...area.exitNodeIds])];
+  const nodePositions = areaNodeIds.map((nodeId) => navigationNodes.find((node) => node.id === nodeId)).filter(Boolean).map((node) => ({
+    node,
+    relativeX: previous.width ? (node.x - previous.x) / previous.width : 0.5,
+    relativeY: previous.height ? (node.y - previous.y) / previous.height : 0.5
+  }));
+  Object.assign(area, next);
+  pointPositions.forEach(({ point, relativeX, relativeY }) => {
+    point.x = area.x + relativeX * area.width;
+    point.y = area.y + relativeY * area.height;
+    clampPointToArea(point, area);
+    updateAttractionPosition(point);
+  });
+  nodePositions.forEach(({ node, relativeX, relativeY }) => {
+    updateNavigationNode(node.id, area.x + relativeX * area.width, area.y + relativeY * area.height);
+  });
+  renderAreas();
+  refreshNavigationMesh();
 }
 
 function calculateActiveRoute() {
   if (!activeDestination) return;
-  if (!currentLocationNodeId || !activeDestination.navigationNodeId) {
+  const destinationArea = getArea(activeDestination.areaId);
+  const destinationNodeId = activeDestination.navigationNodeId ?? destinationArea?.entryNodeIds[0] ?? null;
+  if (!currentLocationNodeId || !destinationNodeId) {
     clearRoute(svgDocument);
     status.textContent = 'Rota indisponível: origem ou destino sem nó de navegação.';
     return;
   }
-  const shortestPath = findShortestPath(currentLocationNodeId, activeDestination.navigationNodeId);
+  const shortestPath = findShortestPath(currentLocationNodeId, destinationNodeId);
   if (!shortestPath) {
     clearRoute(svgDocument);
     status.textContent = 'Não foi possível encontrar uma rota até este ponto de interesse.';
     return;
   }
-  drawRoute(svgDocument, shortestPath);
+  const currentMarker = attractions.find((item) => item.id === 'you-are-here');
+  drawRoute(svgDocument, shortestPath, { x: activeDestination.x, y: activeDestination.y }, currentMarker);
   svgDocument.querySelectorAll('.attraction').forEach((node) => node.classList.remove('selected'));
   svgDocument.querySelector(`[data-attraction-id="${activeDestination.id}"]`)?.classList.add('selected');
   status.textContent = `Rota destacada até ${activeDestination.name}.`;
 }
 
-function setCurrentLocation(nodeId) {
+function setCurrentLocation(nodeId, { moveMarker = true, persist = true } = {}) {
+  if (isDraggingCurrentLocation) return;
   const node = navigationNodes.find((item) => item.id === nodeId);
   const marker = attractions.find((item) => item.id === 'you-are-here');
   if (!node || !marker) return;
   currentLocationNodeId = node.id;
   marker.navigationNodeId = node.id;
-  marker.x = node.x;
-  marker.y = node.y;
+  if (moveMarker) {
+    marker.x = node.x;
+    marker.y = node.y;
+  }
   updateAttractionPosition(marker);
   if (debugSelection?.id === marker.id) selectDebugAttraction(marker);
   const selector = document.querySelector('#debugOriginNode');
   if (selector) selector.value = node.id;
+  if (persist) persistCurrentLocation(marker);
   calculateActiveRoute();
 }
 
@@ -93,11 +228,13 @@ function selectDebugAttraction(attraction) {
   if (!attraction) {
     document.querySelector('#debugAttractionList').value = '';
     document.querySelector('#debugDelete').disabled = true;
+    document.querySelector('#debugPointArea').value = '';
     return;
   }
   svgDocument.querySelector(`[data-attraction-id="${attraction.id}"]`)?.classList.add('debug-selected');
   document.querySelector('#debugAttractionList').value = attraction.id;
   document.querySelector('#debugDelete').disabled = attraction.id === 'you-are-here';
+  document.querySelector('#debugPointArea').value = attraction.areaId;
 }
 
 function refreshAttractionList() {
@@ -120,14 +257,31 @@ function createAttractionElement(attraction) {
   const namespace = 'http://www.w3.org/2000/svg';
   const group = svgDocument.createElementNS(namespace, 'g');
   group.setAttribute('class', 'attraction');
+  if (attraction.id === 'you-are-here') group.classList.add('current-location');
   group.setAttribute('data-id', attraction.id);
   group.setAttribute('data-attraction-id', attraction.id);
   group.setAttribute('tabindex', '0');
-  group.innerHTML = `<text class="attraction-label" x="0" y="-39"></text><circle class="attraction-hit-area" cx="0" cy="0" r="34"></circle><circle class="attraction-marker" cx="0" cy="0" r="25"></circle><text class="attraction-icon" x="0" y="0"></text>`;
-  group.querySelector('.attraction-label').textContent = attraction.name.toUpperCase();
+  group.setAttribute('role', 'button');
+  group.setAttribute('aria-label', attraction.name);
+  const isCurrentLocation = attraction.id === 'you-are-here';
+  group.innerHTML = `<circle class="attraction-hit-area" cx="0" cy="0" r="${isCurrentLocation ? 30 : 27}"></circle><circle class="attraction-marker" cx="0" cy="0" r="${isCurrentLocation ? 21 : 16}"></circle>`;
   group.querySelector('.attraction-marker').setAttribute('fill', attraction.color ?? MARKER_COLORS[attraction.id] ?? '#8b5cf6');
-  group.querySelector('.attraction-icon').textContent = attraction.icon;
   svgDocument.querySelector('#map-content').appendChild(group);
+  const textGroup = svgDocument.createElementNS(namespace, 'g');
+  textGroup.dataset.pointTextId = attraction.id;
+  textGroup.classList.add('point-text');
+  if (isCurrentLocation) textGroup.classList.add('current-location-text');
+  const icon = svgDocument.createElementNS(namespace, 'text');
+  icon.classList.add('attraction-icon');
+  icon.setAttribute('x', 0); icon.setAttribute('y', 0); icon.textContent = attraction.icon;
+  const label = svgDocument.createElementNS(namespace, 'text');
+  label.classList.add('attraction-label');
+  label.dataset.pointLabelId = attraction.id;
+  label.setAttribute('x', 0);
+  label.setAttribute('y', isCurrentLocation ? -31 : -27);
+  label.textContent = attraction.name.toUpperCase();
+  textGroup.append(icon, label);
+  ensureMapLabelsLayer().appendChild(textGroup);
   updateAttractionPosition(attraction);
   group.addEventListener('keydown', (event) => {
     if (event.key !== 'Enter' && event.key !== ' ') return;
@@ -140,8 +294,9 @@ function createAttractionElement(attraction) {
 
 function updateAttractionContent(attraction) {
   const element = svgDocument.querySelector(`[data-attraction-id="${attraction.id}"]`);
-  element.querySelector('.attraction-label').textContent = attraction.name.toUpperCase();
-  element.querySelector('.attraction-icon').textContent = attraction.icon;
+  element.setAttribute('aria-label', attraction.name);
+  svgDocument.querySelector(`[data-point-label-id="${attraction.id}"]`).textContent = attraction.name.toUpperCase();
+  svgDocument.querySelector(`[data-point-text-id="${attraction.id}"] .attraction-icon`).textContent = attraction.icon;
 }
 
 function getMapPoint(event) {
@@ -171,6 +326,8 @@ function updateAttractionsForNode(nodeId) {
   attractions.filter((item) => item.navigationNodeId === nodeId).forEach((attraction) => {
     attraction.x = node.x;
     attraction.y = node.y;
+    const area = getArea(attraction.areaId);
+    if (area) clampPointToArea(attraction, area);
     updateAttractionPosition(attraction);
     if (debugSelection?.id === attraction.id) selectDebugAttraction(attraction);
   });
@@ -242,6 +399,65 @@ function bindNavigationMeshEditing(svgRoot) {
   svgRoot.addEventListener('pointercancel', finishMeshDrag, true);
 }
 
+function bindCurrentLocationDragging(svgRoot) {
+  svgRoot.addEventListener('pointerdown', (event) => {
+    const element = event.target.closest?.('[data-attraction-id="you-are-here"]');
+    if (!element || currentLocationDrag) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    currentLocationDrag = {
+      pointerId: event.pointerId,
+      start: getMapPoint(event),
+      clientX: event.clientX,
+      clientY: event.clientY,
+      marker: attractions.find((item) => item.id === 'you-are-here'),
+      x: attractions.find((item) => item.id === 'you-are-here').x,
+      y: attractions.find((item) => item.id === 'you-are-here').y,
+      moved: false,
+      element
+    };
+    isDraggingCurrentLocation = true;
+    safelyCapturePointer(svgRoot, event.pointerId);
+  }, true);
+
+  svgRoot.addEventListener('pointermove', (event) => {
+    if (!currentLocationDrag || event.pointerId !== currentLocationDrag.pointerId) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    if (!currentLocationDrag.moved && Math.hypot(event.clientX - currentLocationDrag.clientX, event.clientY - currentLocationDrag.clientY) <= 6) return;
+    currentLocationDrag.moved = true;
+    currentLocationDrag.element.classList.add('is-location-dragging');
+    const point = getMapPoint(event);
+    currentLocationDrag.marker.x = Math.min(739, Math.max(21, Math.round(currentLocationDrag.x + point.x - currentLocationDrag.start.x)));
+    currentLocationDrag.marker.y = Math.min(1079, Math.max(21, Math.round(currentLocationDrag.y + point.y - currentLocationDrag.start.y)));
+    const nearest = findNearestNavigationNode(currentLocationDrag.marker.x, currentLocationDrag.marker.y);
+    if (nearest) {
+      currentLocationNodeId = nearest.id;
+      currentLocationDrag.marker.navigationNodeId = nearest.id;
+      const selector = document.querySelector('#debugOriginNode');
+      if (selector) selector.value = nearest.id;
+    }
+    updateAttractionPosition(currentLocationDrag.marker);
+    calculateActiveRoute();
+  }, true);
+
+  const finish = (event) => {
+    if (!currentLocationDrag || event.pointerId !== currentLocationDrag.pointerId) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    safelyReleasePointer(svgRoot, event.pointerId);
+    currentLocationDrag.element.classList.remove('is-location-dragging');
+    if (currentLocationDrag.moved) {
+      persistCurrentLocation(currentLocationDrag.marker);
+      calculateActiveRoute();
+    }
+    currentLocationDrag = null;
+    isDraggingCurrentLocation = false;
+  };
+  svgRoot.addEventListener('pointerup', finish, true);
+  svgRoot.addEventListener('pointercancel', finish, true);
+}
+
 function bindDebugDragging(svgRoot) {
   svgRoot.addEventListener('pointerdown', (event) => {
     if (!debugMode) return;
@@ -253,7 +469,7 @@ function bindDebugDragging(svgRoot) {
     const attraction = attractions.find((item) => item.id === element.dataset.attractionId);
     if (!attraction) return;
     selectDebugAttraction(attraction);
-    svgRoot.setPointerCapture(event.pointerId);
+    safelyCapturePointer(svgRoot, event.pointerId);
     debugDrag = {
       pointerId: event.pointerId,
       start: getMapPoint(event),
@@ -279,6 +495,8 @@ function bindDebugDragging(svgRoot) {
     const point = getMapPoint(event);
     debugDrag.attraction.x = Math.round(debugDrag.x + point.x - debugDrag.start.x);
     debugDrag.attraction.y = Math.round(debugDrag.y + point.y - debugDrag.start.y);
+    const area = getArea(debugDrag.attraction.areaId);
+    if (area) clampPointToArea(debugDrag.attraction, area);
     updateAttractionPosition(debugDrag.attraction);
     selectDebugAttraction(debugDrag.attraction);
     debugDrag.element.classList.add('debug-dragging');
@@ -288,7 +506,7 @@ function bindDebugDragging(svgRoot) {
     if (!debugDrag || event.pointerId !== debugDrag.pointerId) return;
     event.preventDefault();
     event.stopImmediatePropagation();
-    if (svgRoot.hasPointerCapture(event.pointerId)) svgRoot.releasePointerCapture(event.pointerId);
+    safelyReleasePointer(svgRoot, event.pointerId);
     debugDrag.element.classList.remove('debug-dragging');
     if (debugDrag.attraction.id === 'you-are-here') snapCurrentLocationToNearest();
     debugDrag = null;
@@ -346,6 +564,11 @@ function initializeAttractionDropCreator() {
           clientX: pointerEvent.clientX - bounds.left,
           clientY: pointerEvent.clientY - bounds.top
         });
+        const area = findContainingArea(areas, point.x, point.y);
+        if (!area) {
+          message.textContent = 'Solte o ponto dentro de uma das áreas.';
+          return;
+        }
         const attraction = {
           id: `custom-${Date.now()}`,
           name,
@@ -357,10 +580,12 @@ function initializeAttractionDropCreator() {
           accessible: false,
           schedule: 'Não informado',
           navigationNodeId: null,
+          areaId: area.id,
           x: Math.round(point.x),
           y: Math.round(point.y)
         };
         attractions.push(attraction);
+        synchronizeAreaMemberships(areas, attractions);
         createAttractionElement(attraction);
         refreshAttractionList();
         refreshTypeFilters();
@@ -382,6 +607,127 @@ function initializeAttractionDropCreator() {
   });
 }
 
+function populateAreaFields(area) {
+  selectedArea = area ?? null;
+  document.querySelector('#debugAreaList').value = area?.id ?? '';
+  document.querySelector('#debugAreaName').value = area?.name ?? '';
+  document.querySelector('#debugAreaX').value = area?.x ?? '';
+  document.querySelector('#debugAreaY').value = area?.y ?? '';
+  document.querySelector('#debugAreaWidth').value = area?.width ?? '';
+  document.querySelector('#debugAreaHeight').value = area?.height ?? '';
+  renderAreas();
+}
+
+function bindAreaDragging(svgRoot) {
+  svgRoot.addEventListener('pointerdown', (event) => {
+    if (!debugMode || areaDrag) return;
+    const element = event.target.closest?.('[data-area-id]');
+    if (!element) return;
+    const area = getArea(element.dataset.areaId);
+    if (!area) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    populateAreaFields(area);
+    areaDrag = { pointerId: event.pointerId, start: getMapPoint(event), x: area.x, y: area.y, area };
+    safelyCapturePointer(svgRoot, event.pointerId);
+  }, true);
+  svgRoot.addEventListener('pointermove', (event) => {
+    if (!areaDrag || areaDrag.pointerId !== event.pointerId) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    const point = getMapPoint(event);
+    moveOrResizeArea(areaDrag.area, {
+      x: Math.round(areaDrag.x + point.x - areaDrag.start.x),
+      y: Math.round(areaDrag.y + point.y - areaDrag.start.y)
+    });
+    populateAreaFields(areaDrag.area);
+  }, true);
+  const finish = (event) => {
+    if (!areaDrag || areaDrag.pointerId !== event.pointerId) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    safelyReleasePointer(svgRoot, event.pointerId);
+    areaDrag = null;
+  };
+  svgRoot.addEventListener('pointerup', finish, true);
+  svgRoot.addEventListener('pointercancel', finish, true);
+}
+
+function initializeAreaEditor(svgRoot) {
+  const areaList = document.querySelector('#debugAreaList');
+  const pointAreaList = document.querySelector('#debugPointArea');
+  areaList.appendChild(new Option('Selecione uma área', ''));
+  pointAreaList.appendChild(new Option('Selecione uma área', ''));
+  areas.forEach((area) => {
+    areaList.appendChild(new Option(area.name, area.id));
+    pointAreaList.appendChild(new Option(area.name, area.id));
+  });
+  areaList.addEventListener('change', () => populateAreaFields(getArea(areaList.value)));
+  document.querySelector('#debugAreaName').addEventListener('input', (event) => {
+    if (!selectedArea) return;
+    selectedArea.name = event.target.value;
+    areaList.selectedOptions[0].textContent = selectedArea.name;
+    pointAreaList.querySelector(`[value="${selectedArea.id}"]`).textContent = selectedArea.name;
+    renderAreas();
+  });
+  const updateAreaGeometry = () => {
+    if (!selectedArea) return;
+    const values = {
+      x: Number(document.querySelector('#debugAreaX').value),
+      y: Number(document.querySelector('#debugAreaY').value),
+      width: Number(document.querySelector('#debugAreaWidth').value),
+      height: Number(document.querySelector('#debugAreaHeight').value)
+    };
+    if (!Object.values(values).every(Number.isFinite) || values.width < 80 || values.height < 80) return;
+    moveOrResizeArea(selectedArea, values);
+  };
+  ['debugAreaX', 'debugAreaY', 'debugAreaWidth', 'debugAreaHeight'].forEach((id) => {
+    document.querySelector(`#${id}`).addEventListener('change', updateAreaGeometry);
+  });
+  pointAreaList.addEventListener('change', () => {
+    if (!debugSelection) return;
+    const area = getArea(pointAreaList.value);
+    if (!area) return;
+    debugSelection.areaId = area.id;
+    debugSelection.navigationNodeId = area.entryNodeIds[0] ?? null;
+    if (!findContainingArea([area], debugSelection.x, debugSelection.y)) {
+      debugSelection.x = area.x + area.width / 2;
+      debugSelection.y = area.y + area.height / 2;
+    }
+    clampPointToArea(debugSelection, area);
+    synchronizeAreaMemberships(areas, attractions);
+    updateAttractionPosition(debugSelection);
+    calculateActiveRoute();
+  });
+  bindAreaDragging(svgRoot);
+}
+
+function initializeFloorPlanEditor() {
+  document.querySelector('#debugFloorFile').addEventListener('change', (event) => {
+    const [file] = event.target.files;
+    if (!file) return;
+    if (floorPlanUrl) URL.revokeObjectURL(floorPlanUrl);
+    floorPlanUrl = URL.createObjectURL(file);
+    renderFloorPlan();
+  });
+  const updateFloor = () => {
+    floorPlan.x = Number(document.querySelector('#debugFloorX').value) || 0;
+    floorPlan.y = Number(document.querySelector('#debugFloorY').value) || 0;
+    floorPlan.scale = Math.max(0.1, Number(document.querySelector('#debugFloorScale').value) || 1);
+    floorPlan.opacity = Math.min(1, Math.max(0, Number(document.querySelector('#debugFloorOpacity').value)));
+    renderFloorPlan();
+  };
+  ['debugFloorX', 'debugFloorY', 'debugFloorScale', 'debugFloorOpacity'].forEach((id) => {
+    document.querySelector(`#${id}`).addEventListener('input', updateFloor);
+  });
+  document.querySelector('#debugFloorRemove').addEventListener('click', () => {
+    if (floorPlanUrl) URL.revokeObjectURL(floorPlanUrl);
+    floorPlanUrl = null;
+    document.querySelector('#debugFloorFile').value = '';
+    renderFloorPlan();
+  });
+}
+
 function initializeEditor(svgRoot) {
   const panel = document.querySelector('#debugPanel');
   const list = document.querySelector('#debugAttractionList');
@@ -390,12 +736,14 @@ function initializeEditor(svgRoot) {
     debugMode = enabled;
     panel.hidden = !enabled;
     toggle.setAttribute('aria-pressed', String(enabled));
+    svgRoot.classList.toggle('debug-mode', enabled);
     renderNavigationGraph(svgDocument, enabled);
     populateConnectionFields(navigationEdges.find((edge) => edge.id === selectedNavigationEdgeId));
     if (!enabled) {
       selectDebugAttraction(null);
       debugDrag = null;
       meshDrag = null;
+      areaDrag = null;
     } else if (!debugSelection && attractions.length) {
       selectDebugAttraction(attractions[0]);
     }
@@ -403,6 +751,8 @@ function initializeEditor(svgRoot) {
 
   refreshAttractionList();
   initializeAttractionDropCreator();
+  initializeAreaEditor(svgRoot);
+  initializeFloorPlanEditor();
   const originList = document.querySelector('#debugOriginNode');
   navigationNodes.forEach((node) => originList.appendChild(new Option(node.id, node.id)));
   originList.value = currentLocationNodeId;
@@ -456,7 +806,9 @@ function initializeEditor(svgRoot) {
     if (!debugSelection) return;
     if (debugSelection.id === 'you-are-here') return;
     svgDocument.querySelector(`[data-attraction-id="${debugSelection.id}"]`)?.remove();
+    svgDocument.querySelector(`[data-point-text-id="${debugSelection.id}"]`)?.remove();
     attractions = attractions.filter((item) => item.id !== debugSelection.id);
+    synchronizeAreaMemberships(areas, attractions);
     selectedAttraction = selectedAttraction?.id === debugSelection.id ? null : selectedAttraction;
     if (activeDestination?.id === debugSelection.id) activeDestination = null;
     clearRoute(svgDocument);
@@ -498,9 +850,11 @@ function closeAttractionDetails() {
 function bindMapAttractions() {
   const svgRoot = svgDocument.documentElement;
 
+  renderAreas();
   renderCirculationPaths(svgDocument);
   attractions.forEach(createAttractionElement);
-  setCurrentLocation(currentLocationNodeId);
+  bindCurrentLocationDragging(svgRoot);
+  setCurrentLocation(currentLocationNodeId, { moveMarker: false, persist: false });
   initializeEditor(svgRoot);
 
   const mapContent = svgDocument.querySelector('#map-content');
@@ -525,7 +879,9 @@ function applyVisibility() {
   attractions.forEach((attraction) => {
     const matchesType = activeType === 'all' || attraction.type === activeType || attraction.id === 'you-are-here';
     const matchesSearch = !query || `${attraction.name} ${attraction.description}`.toLowerCase().includes(query);
-    svgDocument.querySelector(`[data-id="${attraction.id}"]`)?.classList.toggle('hidden', !(matchesType && matchesSearch));
+    const hidden = !(matchesType && matchesSearch);
+    svgDocument.querySelector(`[data-id="${attraction.id}"]`)?.classList.toggle('hidden', hidden);
+    svgDocument.querySelector(`[data-point-text-id="${attraction.id}"]`)?.classList.toggle('hidden', hidden);
   });
 }
 
@@ -541,7 +897,17 @@ function refreshTypeFilters() {
 
 async function init() {
   document.querySelector('#app-version').textContent = `v${APP_VERSION.number} · ${APP_VERSION.updatedAt}`;
-  attractions = await loadAttractions();
+  [attractions, areas] = await Promise.all([loadAttractions(), loadAreas()]);
+  attractions.forEach((point) => {
+    if (point.id === 'you-are-here') {
+      restoreCurrentLocation(point);
+      return;
+    }
+    const assignedArea = getArea(point.areaId) ?? findContainingArea(areas, point.x, point.y) ?? areas[0];
+    point.areaId = assignedArea.id;
+    clampPointToArea(point, assignedArea);
+  });
+  synchronizeAreaMemberships(areas, attractions);
   currentLocationNodeId = attractions.find((item) => item.id === 'you-are-here')?.navigationNodeId ?? null;
   refreshTypeFilters();
 

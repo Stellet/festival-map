@@ -118,9 +118,9 @@
 .debug-hint { margin: 0 0 9px; color: var(--text-muted); font-size: .72rem; }
 .debug-drag-ghost { position: fixed; top: -29px; left: -29px; z-index: 100; width: 58px; height: 58px; margin: 0; border: 2px solid var(--secondary); border-radius: 50%; background: var(--surface-strong); color: var(--text); pointer-events: none; }
 .debug-drag-ghost small { display: none; }
-.debug-mesh-editor { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--border); }
-.debug-mesh-editor summary { color: var(--secondary); font-size: .76rem; font-weight: 700; cursor: pointer; }
-.debug-mesh-editor[open] summary { margin-bottom: 9px; }
+.debug-mesh-editor, .debug-area-editor, .debug-floor-editor { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--border); }
+.debug-mesh-editor summary, .debug-area-editor summary, .debug-floor-editor summary { color: var(--secondary); font-size: .76rem; font-weight: 700; cursor: pointer; }
+.debug-mesh-editor[open] summary, .debug-area-editor[open] summary, .debug-floor-editor[open] summary { margin-bottom: 9px; }
 .debug-actions { display: flex; flex-wrap: wrap; gap: 7px; }
 .debug-panel button { min-height: 38px; margin-top: 7px; padding: 7px 10px; border-radius: 9px; background: var(--surface-strong); color: var(--text); font-weight: 700; }
 .debug-panel button:hover { background: var(--primary); }

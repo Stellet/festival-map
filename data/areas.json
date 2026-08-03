@@ -1,0 +1,9 @@
+[
+  {"id":"main-stage-area","name":"Área do Palco Principal","x":325,"y":40,"width":250,"height":175,"entryNodeIds":["main-stage"],"exitNodeIds":["main-stage"],"pointIds":["main-stage"],"standCapacity":0,"stageCapacity":1},
+  {"id":"creative-area","name":"Circuito Criativo","x":165,"y":215,"width":455,"height":180,"entryNodeIds":["tech-upper","art-upper","culture-upper"],"exitNodeIds":["tech-upper","art-upper","culture-upper"],"pointIds":[],"standCapacity":12,"stageCapacity":0},
+  {"id":"experience-area","name":"Experiências","x":145,"y":400,"width":245,"height":225,"entryNodeIds":["tech-experience"],"exitNodeIds":["tech-experience"],"pointIds":["alternative-stage"],"standCapacity":6,"stageCapacity":1},
+  {"id":"services-area","name":"Serviços e Informação","x":395,"y":395,"width":240,"height":270,"entryNodeIds":["art-interactive","culture-medical"],"exitNodeIds":["art-interactive","culture-medical"],"pointIds":["medical","you-are-here"],"standCapacity":4,"stageCapacity":0},
+  {"id":"activities-area","name":"Atividades e Exposições","x":145,"y":625,"width":315,"height":205,"entryNodeIds":["tech-exhibitors","cross-center","art-kids"],"exitNodeIds":["tech-exhibitors","cross-center","art-kids"],"pointIds":["restrooms","kids-area","exhibitors"],"standCapacity":20,"stageCapacity":0},
+  {"id":"food-area","name":"Alimentação","x":465,"y":675,"width":220,"height":180,"entryNodeIds":["culture-food"],"exitNodeIds":["culture-food"],"pointIds":["food-court"],"standCapacity":14,"stageCapacity":0},
+  {"id":"access-area","name":"Acessos","x":270,"y":850,"width":440,"height":205,"entryNodeIds":["entrance","tech-lower","art-lower","culture-lower","emergency-exit"],"exitNodeIds":["entrance","emergency-exit"],"pointIds":["main-entrance","emergency-exit"],"standCapacity":2,"stageCapacity":0}
+]
