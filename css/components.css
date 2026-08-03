@@ -89,7 +89,7 @@
   bottom: max(12px, env(safe-area-inset-bottom));
   left: max(12px, env(safe-area-inset-left));
   width: auto;
-  max-width: min(680px, calc(100dvw - max(24px, env(safe-area-inset-left)) - max(24px, env(safe-area-inset-right))));
+  max-width: min(360px, calc(100dvw - max(24px, env(safe-area-inset-left)) - max(24px, env(safe-area-inset-right))));
   max-height: 50dvh;
   margin-top: 0;
   padding: 14px;
@@ -111,6 +111,16 @@
 .debug-panel input { width: 100%; height: 38px; padding: 0 9px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface-strong); color: var(--text); }
 .debug-coordinates { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 9px 0; }
 .debug-editor-fields { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 9px; }
+.debug-type-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; margin: 9px 0; }
+.debug-type-list .debug-type { display: grid; place-items: center; gap: 3px; min-width: 0; min-height: 58px; margin: 0; padding: 6px 3px; touch-action: none; cursor: grab; }
+.debug-type span { color: var(--secondary); font-size: 1.05rem; font-weight: 800; line-height: 1; }
+.debug-type small { max-width: 100%; overflow: hidden; color: var(--text); font-size: .66rem; text-overflow: ellipsis; white-space: nowrap; }
+.debug-hint { margin: 0 0 9px; color: var(--text-muted); font-size: .72rem; }
+.debug-drag-ghost { position: fixed; top: -29px; left: -29px; z-index: 100; width: 58px; height: 58px; margin: 0; border: 2px solid var(--secondary); border-radius: 50%; background: var(--surface-strong); color: var(--text); pointer-events: none; }
+.debug-drag-ghost small { display: none; }
+.debug-mesh-editor { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--border); }
+.debug-mesh-editor summary { color: var(--secondary); font-size: .76rem; font-weight: 700; cursor: pointer; }
+.debug-mesh-editor[open] summary { margin-bottom: 9px; }
 .debug-actions { display: flex; flex-wrap: wrap; gap: 7px; }
 .debug-panel button { min-height: 38px; margin-top: 7px; padding: 7px 10px; border-radius: 9px; background: var(--surface-strong); color: var(--text); font-weight: 700; }
 .debug-panel button:hover { background: var(--primary); }
@@ -122,5 +132,5 @@
   .detail-sheet { left: auto; right: max(1.5rem, env(safe-area-inset-right)); bottom: max(1.5rem, env(safe-area-inset-bottom)); width: min(380px, calc(100dvw - 3rem)); border-radius: 24px; }
   .app-header, .search-panel { padding-left: 2rem; padding-right: 2rem; }
   .debug-editor-fields { grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr)); }
-  .debug-panel { left: auto; width: min(680px, calc(100dvw - 48px)); max-height: 50dvh; }
+  .debug-panel { left: auto; width: min(360px, calc(100dvw - 48px)); max-height: 50dvh; }
 }

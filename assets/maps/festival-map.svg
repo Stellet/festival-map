@@ -1,12 +1,15 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="title description">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 1100" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="title description">
   <title id="title">Mapa fictício do Festival Horizonte</title>
-  <desc id="description">Mapa vetorial com palcos, alimentação, banheiros, posto médico, feira, área infantil e entradas.</desc>
+  <desc id="description">Mapa vetorial com atrações e malha de circulação navegável.</desc>
   <style>
-    .street-floor, .street-line, .corridor-floor, .corridor-line { fill: none; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
-    .street-floor { stroke: #0b0d12; stroke-width: 42; }
-    .street-line { stroke: #596174; stroke-width: 17; }
-    .corridor-floor { stroke: #10131a; stroke-width: 24; }
-    .corridor-line { stroke: #454c5e; stroke-width: 8; }
+    [class^="circulation-"], .street-floor, .street-line, .corridor-floor, .corridor-line { fill: none; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
+    .circulation-main-path-floor, .circulation-main-floor, .street-floor { stroke: #0b0d12; stroke-width: 42; }
+    .circulation-main-path-line, .circulation-main-line, .street-line { stroke: #596174; stroke-width: 17; }
+    .circulation-ramp-floor { stroke: #10131a; stroke-width: 30; }
+    .circulation-ramp-line { stroke: #596174; stroke-width: 11; }
+    .circulation-corridor-floor, .circulation-stairs-floor, .circulation-building-access-floor, .corridor-floor { stroke: #10131a; stroke-width: 22; }
+    .circulation-corridor-line, .circulation-stairs-line, .circulation-building-access-line, .corridor-line { stroke: #454c5e; stroke-width: 7; }
+    .circulation-stairs-steps { fill: none; stroke: #a8afc3; stroke-width: 4; stroke-linecap: square; pointer-events: none; }
     .attraction { cursor: pointer; transition: opacity .15s ease; }
     .attraction:hover { opacity: .85; }
     .attraction-label { font-family: Inter, ui-sans-serif, system-ui, sans-serif; font-size: 20px; font-weight: 700; fill: #f5f7ff; stroke: #181b24; stroke-width: 4; paint-order: stroke; text-anchor: middle; pointer-events: none; user-select: none; }
@@ -17,108 +20,23 @@
     .debug-selected .attraction-marker { stroke: #facc15; stroke-width: 9; }
     .debug-dragging { opacity: .72; }
     .hidden { display: none; }
-    #routeLine { fill: none; stroke: #8b5cf6; stroke-width: 18; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 28 18; filter: drop-shadow(0 4px 5px rgba(0, 0, 0, 0.4)); pointer-events: none; }
     #active-route { fill: none; stroke: #ffffff; stroke-width: 13; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 0 7px #22d3ee); pointer-events: none; }
     #route-origin-marker { fill: #22d3ee; stroke: #ffffff; stroke-width: 5; pointer-events: none; }
     #route-destination-marker { fill: #fb7185; stroke: #ffffff; stroke-width: 5; pointer-events: none; }
     #navigation-debug { display: none; pointer-events: none; }
     #navigation-debug.is-visible { display: block; }
-    #navigation-debug line { stroke: #f5f7ff; stroke-width: 3; stroke-dasharray: 8 7; opacity: .6; }
-    #navigation-debug circle { fill: #facc15; stroke: #0f1117; stroke-width: 3; pointer-events: all; cursor: crosshair; }
+    #navigation-debug path { fill: none; stroke: #f5f7ff; stroke-width: 7; stroke-dasharray: 8 7; opacity: .6; pointer-events: stroke; cursor: pointer; }
+    #navigation-debug path.is-selected { stroke: #fb7185; stroke-width: 11; opacity: 1; }
+    #navigation-debug circle { stroke: #0f1117; stroke-width: 3; pointer-events: all; cursor: crosshair; }
+    #navigation-debug [data-navigation-node-id] { fill: #facc15; }
+    #navigation-debug [data-navigation-control-id] { fill: #22d3ee; }
     svg, #map-content, #map-content * { touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
     svg { cursor: grab; }
     svg.is-dragging { cursor: grabbing; }
     text { pointer-events: none; }
   </style>
-
   <g id="map-content" transform="translate(0 0) scale(1)">
-  <rect width="1200" height="800" fill="#0f1117" />
-  <rect x="40" y="40" width="1120" height="720" rx="48" fill="#181b24" stroke="#34394a" stroke-width="12" />
-
-  <path class="street-floor" d="M600 720 Q555 700 510 665 Q455 635 430 570 Q470 455 545 365 Q600 290 650 235 Q690 185 700 140" />
-  <path class="street-floor" d="M600 720 Q655 705 710 675 Q790 665 825 590 Q875 490 820 400 Q790 315 750 250 Q720 190 700 140" />
-  <path class="street-floor" d="M600 720 Q535 750 470 720 Q375 710 335 640 Q270 545 310 445 Q390 385 500 300 Q590 225 700 140" />
-  <path class="street-line" d="M600 720 Q555 700 510 665 Q455 635 430 570 Q470 455 545 365 Q600 290 650 235 Q690 185 700 140" />
-  <path class="street-line" d="M600 720 Q655 705 710 675 Q790 665 825 590 Q875 490 820 400 Q790 315 750 250 Q720 190 700 140" />
-  <path class="street-line" d="M600 720 Q535 750 470 720 Q375 710 335 640 Q270 545 310 445 Q390 385 500 300 Q590 225 700 140" />
-
-  <path class="corridor-floor" d="M430 570 Q515 525 600 520 Q720 530 825 590" />
-  <path class="corridor-floor" d="M545 365 Q680 420 820 400" />
-  <path class="corridor-floor" d="M310 445 Q430 485 545 365" />
-  <path class="corridor-floor" d="M825 590 Q930 625 1030 690" />
-  <path class="corridor-line" d="M430 570 Q515 525 600 520 Q720 530 825 590" />
-  <path class="corridor-line" d="M545 365 Q680 420 820 400" />
-  <path class="corridor-line" d="M310 445 Q430 485 545 365" />
-  <path class="corridor-line" d="M825 590 Q930 625 1030 690" />
-
-  <g data-id="main-stage" data-attraction-id="main-stage" class="attraction" tabindex="0" transform="translate(700 140)">
-    <text class="attraction-label" x="0" y="-39">PALCO PRINCIPAL</text>
-    <circle class="attraction-hit-area" cx="0" cy="0" r="34" />
-    <circle class="attraction-marker" cx="0" cy="0" r="25" fill="#8b5cf6" />
-    <text class="attraction-icon" x="0" y="0">★</text>
-  </g>
-
-  <g data-id="alternative-stage" data-attraction-id="alternative-stage" class="attraction" tabindex="0" transform="translate(545 365)">
-    <text class="attraction-label" x="0" y="-39">PALCO ALTERNATIVO</text>
-    <circle class="attraction-hit-area" cx="0" cy="0" r="34" />
-    <circle class="attraction-marker" cx="0" cy="0" r="25" fill="#fb7185" />
-    <text class="attraction-icon" x="0" y="0">★</text>
-  </g>
-
-  <g data-id="food-court" data-attraction-id="food-court" class="attraction" tabindex="0" transform="translate(335 640)">
-    <text class="attraction-label" x="0" y="-39">ALIMENTAÇÃO</text>
-    <circle class="attraction-hit-area" cx="0" cy="0" r="34" />
-    <circle class="attraction-marker" cx="0" cy="0" r="25" fill="#d99f08" />
-    <text class="attraction-icon" x="0" y="0">F</text>
-  </g>
-
-  <g data-id="exhibitors" data-attraction-id="exhibitors" class="attraction" tabindex="0" transform="translate(430 570)">
-    <text class="attraction-label" x="0" y="-39">FEIRA DE EXPOSITORES</text>
-    <circle class="attraction-hit-area" cx="0" cy="0" r="34" />
-    <circle class="attraction-marker" cx="0" cy="0" r="25" fill="#0e9f9a" />
-    <text class="attraction-icon" x="0" y="0">◆</text>
-  </g>
-
-  <g data-id="kids-area" data-attraction-id="kids-area" class="attraction" tabindex="0" transform="translate(825 590)">
-    <text class="attraction-label" x="0" y="-39">ÁREA INFANTIL</text>
-    <circle class="attraction-hit-area" cx="0" cy="0" r="34" />
-    <circle class="attraction-marker" cx="0" cy="0" r="25" fill="#db4f8c" />
-    <text class="attraction-icon" x="0" y="0">◆</text>
-  </g>
-
-  <g data-id="restrooms" data-attraction-id="restrooms" class="attraction" tabindex="0" transform="translate(600 520)">
-    <text class="attraction-label" x="0" y="-39">BANHEIROS</text>
-    <circle class="attraction-hit-area" cx="0" cy="0" r="34" />
-    <circle class="attraction-marker" cx="0" cy="0" r="25" fill="#168db5" />
-    <text class="attraction-icon" x="0" y="0">WC</text>
-  </g>
-
-  <g data-id="medical" data-attraction-id="medical" class="attraction" tabindex="0" transform="translate(310 445)">
-    <text class="attraction-label" x="0" y="-39">POSTO MÉDICO</text>
-    <circle class="attraction-hit-area" cx="0" cy="0" r="34" />
-    <circle class="attraction-marker" cx="0" cy="0" r="25" fill="#e25555" />
-    <text class="attraction-icon" x="0" y="0">+</text>
-  </g>
-
-  <g data-id="main-entrance" data-attraction-id="main-entrance" class="attraction" tabindex="0" transform="translate(600 720)">
-    <text class="attraction-label" x="0" y="-39">ENTRADA PRINCIPAL</text>
-    <circle class="attraction-hit-area" cx="0" cy="0" r="34" />
-    <circle class="attraction-marker" cx="0" cy="0" r="25" fill="#2c9b64" />
-    <text class="attraction-icon" x="0" y="0">E</text>
-  </g>
-
-  <g data-id="emergency-exit" data-attraction-id="emergency-exit" class="attraction" tabindex="0" transform="translate(1030 690)">
-    <text class="attraction-label" x="0" y="-39">SAÍDA DE EMERGÊNCIA</text>
-    <circle class="attraction-hit-area" cx="0" cy="0" r="34" />
-    <circle class="attraction-marker" cx="0" cy="0" r="25" fill="#fb7185" />
-    <text class="attraction-icon" x="0" y="0">S</text>
-  </g>
-
-  <g data-id="you-are-here" data-attraction-id="you-are-here" class="attraction" tabindex="0" transform="translate(820 400)">
-    <text class="attraction-label" x="0" y="-39">VOCÊ ESTÁ AQUI</text>
-    <circle class="attraction-hit-area" cx="0" cy="0" r="34" />
-    <circle class="attraction-marker" cx="0" cy="0" r="25" fill="#172033" />
-    <text class="attraction-icon" x="0" y="0">●</text>
-  </g>
+    <rect width="760" height="1100" fill="#0f1117" />
+    <rect x="35" y="35" width="690" height="1030" rx="42" fill="#181b24" stroke="#34394a" stroke-width="10" />
   </g>
 </svg>

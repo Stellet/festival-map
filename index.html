@@ -26,35 +26,29 @@
       </div>
       <section id="debugPanel" class="debug-panel" hidden>
         <div class="debug-heading">
-          <h2>Debug de posições</h2>
-          <div><button id="debugCollapse" type="button" aria-expanded="true">Recolher</button><button id="debugNew" type="button">Nova atração</button></div>
+          <h2>Inserir atração</h2>
+          <button id="debugCollapse" type="button" aria-expanded="true">Recolher</button>
         </div>
-        <label>Você está aqui<select id="debugOriginNode"></select></label>
-        <label>Atração<select id="debugAttractionList"></select></label>
-        <div class="debug-editor-fields">
-          <label>Nome<input id="debugName" type="text" /></label>
-          <label>Descrição<input id="debugDescription" type="text" /></label>
-          <label>Ícone
-            <select id="debugIcon">
-              <option value="★">★ Palco</option><option value="F">F Alimentação</option>
-              <option value="WC">WC Banheiro</option><option value="+">+ Médico</option>
-              <option value="◆">◆ Atividade</option><option value="E">E Entrada</option><option value="S">S Saída</option>
-              <option value="●">● Localização</option>
-            </select>
-          </label>
-          <label>Nó de navegação<select id="debugNavigationNode"></select></label>
-        </div>
-        <div class="debug-coordinates">
-          <label>X<input id="debugX" type="number" step="1" /></label>
-          <label>Y<input id="debugY" type="number" step="1" /></label>
-        </div>
+        <label>Nome<input id="debugName" type="text" placeholder="Nome da atração" /></label>
+        <div id="debugTypeList" class="debug-type-list" aria-label="Tipos de atração"></div>
+        <p class="debug-hint">Arraste um tipo até o mapa para criar.</p>
+        <label>Atração selecionada<select id="debugAttractionList"></select></label>
         <div class="debug-actions">
-          <button id="debugAdd" type="button">Adicionar</button>
           <button id="debugDelete" type="button">Excluir</button>
-          <button id="debugCenter" type="button">Centralizar</button>
-          <button id="debugCopy" type="button">Copiar posições</button>
-          <button id="debugRestore" type="button">Restaurar posições</button>
         </div>
+        <details class="debug-mesh-editor">
+          <summary>Editar malha de circulação</summary>
+          <label>Você está aqui<select id="debugOriginNode"></select></label>
+          <label>Conexão<select id="debugConnectionList"></select></label>
+          <div class="debug-editor-fields">
+            <label>Origem<select id="debugConnectionFrom"></select></label>
+            <label>Destino<select id="debugConnectionTo"></select></label>
+            <label>Tipo<select id="debugConnectionType"><option value="main-path">main-path</option><option value="corridor">corridor</option><option value="ramp">ramp</option><option value="stairs">stairs</option><option value="building-access">building-access</option></select></label>
+            <label>Controle X<input id="debugControlX" type="number" step="1" /></label>
+            <label>Controle Y<input id="debugControlY" type="number" step="1" /></label>
+          </div>
+          <button id="debugCopyMesh" type="button">Copiar malha</button>
+        </details>
         <p id="debugStatus" class="debug-status" aria-live="polite"></p>
       </section>
     </header>

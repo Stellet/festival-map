@@ -17,8 +17,7 @@
   min-height: 0;
 }
 
-#festivalMap,
-.route-overlay {
+#festivalMap {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -27,18 +26,6 @@
 
 .map-svg { width: 100%; height: 100%; display: block; max-width: none; pointer-events: auto; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; cursor: grab; }
 .map-svg.is-dragging { cursor: grabbing; }
-.route-overlay { pointer-events: none; }
-
-#routeLine {
-  fill: none;
-  stroke: var(--primary);
-  stroke-width: 18;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-dasharray: 28 18;
-  filter: drop-shadow(0 4px 5px rgba(23, 32, 51, 0.3));
-}
-
 .map-controls {
   position: absolute;
   right: max(16px, calc(env(safe-area-inset-right) + 8px));

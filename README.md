@@ -1,40 +1,49 @@
 # Festival Map
 
-Protótipo mobile-first de um mapa interativo para festivais, construído com HTML, CSS, JavaScript e SVG.
+Protótipo mobile-first de mapa interativo para festivais, construído com HTML, CSS, JavaScript modular e SVG, sem frameworks ou bibliotecas externas.
 
 ## Como executar
 
-O projeto precisa ser servido por HTTP porque as atrações são carregadas de um arquivo JSON.
+Sirva a raiz do projeto por HTTP. O uso direto via `file://` não funciona porque as atrações são carregadas com `fetch()`.
 
-### VS Code + Live Server
+Exemplos: VS Code Live Server ou qualquer servidor HTTP estático. Todos os caminhos são relativos e compatíveis com GitHub Pages.
 
-1. Abra a pasta `festival-map` no VS Code.
-2. Instale a extensão **Live Server**.
-3. Clique com o botão direito em `index.html`.
-4. Selecione **Open with Live Server**.
+## Estrutura
+
+- `index.html`: interface, controles, painel de detalhes e editor debug.
+- `data/attractions.json`: dados iniciais e posições das atrações.
+- `assets/maps/festival-map.svg`: superfície SVG e estilos internos do mapa.
+- `js/app.js`: inicialização e integração dos recursos.
+- `js/map-controller.js`: enquadramento, zoom, drag e pinça.
+- `js/navigation.js`: malha de circulação, grafo, pesos, Dijkstra e rota ativa.
+- `js/attractions.js`: carregamento dos dados e categorias.
+- `js/ui.js`: filtros e painel de detalhes.
+- `css/`: tokens, layout e componentes responsivos.
 
 ## Recursos atuais
 
-- Mapa fictício desenhado em SVG por código.
-- Áreas coloridas e marcadores interativos.
-- Busca por atrações e serviços.
-- Filtros por categoria.
-- Zoom, arraste e restauração da visualização.
-- Painel de detalhes.
-- Rota visual simples a partir do ponto “Você está aqui”.
-- Interface adaptada para celular e desktop.
+- Busca e filtros por categoria.
+- Atrações renderizadas a partir do estado carregado do JSON.
+- Painel de detalhes e botão “Como chegar”.
+- Zoom por botões, roda do mouse e pinça.
+- Arraste por mouse ou toque, com limites de pan.
+- Enquadramento responsivo para desktop e celular.
+- Grafo bidirecional com Dijkstra sobre uma malha vertical de percursos, corredores, rampas, escadas e acessos.
+- Origem fictícia “Você está aqui”, selecionável entre nós do grafo.
+- Modo debug ativável pelo botão ou por `?debug=true`.
+- Criação visual por drag and drop, exclusão e posicionamento local de atrações.
+- Visualização debug dos nós e conexões.
+- Edição em memória de nós, conexões, tipos e pontos de controle da malha.
+
+## Estado e persistência
+
+O JSON é a fonte inicial. Edições feitas pelo debug existem somente em memória e são descartadas ao recarregar. Não há backend, `localStorage`, geolocalização real ou funcionamento offline.
+
+O botão “Restaurar posições” restaura somente as coordenadas X/Y das atrações originais ainda presentes; ele não restaura integralmente edições ou exclusões.
 
 ## Limitações atuais
 
-- A rota ainda é uma linha demonstrativa, não um cálculo real sobre caminhos.
-- O ponto inicial é fixo.
-- O zoom por gesto de pinça ainda não foi implementado.
-- O mapa ainda não usa geolocalização nem planta real.
-
-## Próximos passos
-
-- Criar uma malha de nós e conexões para rotas reais.
-- Implementar zoom por pinça com dois dedos.
-- Adicionar múltiplos pontos “Você está aqui”.
-- Criar editor interno de atrações e posições.
-- Preparar funcionamento offline como PWA.
+- A malha editada não é persistida e não permite criar ou excluir nós e conexões.
+- Atrações criadas localmente precisam ser associadas manualmente a um nó para receber rota.
+- O painel de detalhes usa categorias técnicas e metadados simplificados.
+- Não há persistência, PWA ou planta real do evento.

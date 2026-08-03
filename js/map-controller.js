@@ -7,9 +7,9 @@ export class MapController {
     this.minScale = 1;
     this.maxScale = 4;
     this.fitScale = 1;
-    this.fitCenter = { x: 600, y: 400 };
-    this.mapWidth = 1200;
-    this.mapHeight = 800;
+    this.fitCenter = { x: 380, y: 550 };
+    this.mapWidth = 760;
+    this.mapHeight = 1100;
     this.dragThreshold = 6;
     this.pointers = new Map();
     this.dragStart = null;
@@ -66,7 +66,7 @@ export class MapController {
 
   onPointerDown(event) {
     event.preventDefault();
-    event.currentTarget.setPointerCapture?.(event.pointerId);
+    try { event.currentTarget.setPointerCapture?.(event.pointerId); } catch { /* captura indisponível */ }
     const point = this.getSvgPoint(event);
     this.pointers.set(event.pointerId, { point, clientX: event.clientX, clientY: event.clientY });
     this.svg.classList.add('is-dragging');
@@ -106,6 +106,7 @@ export class MapController {
       this.transform.scale = scale;
       this.transform.x = center.x - (this.pinchStart.center.x - this.pinchStart.x) * ratio;
       this.transform.y = center.y - (this.pinchStart.center.y - this.pinchStart.y) * ratio;
+      this.clampTransform();
       this.applyTransform();
       return;
     }
@@ -116,6 +117,7 @@ export class MapController {
       if (this.press) this.press.dragged = true;
       this.transform.x = this.dragStart.x + currentPoint.x - this.dragStart.point.x;
       this.transform.y = this.dragStart.y + currentPoint.y - this.dragStart.point.y;
+      this.clampTransform();
       this.applyTransform();
     }
   }
@@ -127,15 +129,26 @@ export class MapController {
       && !this.press.dragged
       && this.press.attraction;
 
-    if (event.currentTarget.hasPointerCapture?.(event.pointerId)) {
-      event.currentTarget.releasePointerCapture(event.pointerId);
-    }
+    try {
+      if (event.currentTarget.hasPointerCapture?.(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+    } catch { /* captura já liberada */ }
     this.pointers.delete(event.pointerId);
     this.pinchStart = null;
-    this.dragStart = null;
     this.press = null;
 
     if (event.type === 'pointercancel') this.pointers.clear();
+    if (this.pointers.size === 1) {
+      const remaining = [...this.pointers.values()][0];
+      this.dragStart = {
+        point: remaining.point,
+        x: this.transform.x,
+        y: this.transform.y,
+        clientX: remaining.clientX,
+        clientY: remaining.clientY
+      };
+    } else {
+      this.dragStart = null;
+    }
     if (this.pointers.size === 0) this.svg.classList.remove('is-dragging');
     if (shouldActivate) this.onActivate?.(shouldActivate.dataset.attractionId);
   }
@@ -152,6 +165,21 @@ export class MapController {
     return Math.min(this.maxScale, Math.max(this.minScale, scale));
   }
 
+  clampTransform() {
+    if (!this.svg) return;
+    const viewBox = this.svg.viewBox.baseVal;
+    const contentWidth = this.mapWidth * this.transform.scale;
+    const contentHeight = this.mapHeight * this.transform.scale;
+    const visibleMargin = Math.min(96, viewBox.width / 4, viewBox.height / 4);
+    const clampAxis = (value, contentSize, viewportSize) => {
+      const minimum = visibleMargin - contentSize;
+      const maximum = viewportSize - visibleMargin;
+      return minimum > maximum ? (viewportSize - contentSize) / 2 : Math.min(maximum, Math.max(minimum, value));
+    };
+    this.transform.x = clampAxis(this.transform.x, contentWidth, viewBox.width);
+    this.transform.y = clampAxis(this.transform.y, contentHeight, viewBox.height);
+  }
+
   zoomBy(factor, center = this.fitCenter) {
     if (!this.mapContent) return;
     const scale = this.clampScale(this.transform.scale * factor);
@@ -159,6 +187,7 @@ export class MapController {
     this.transform.x = center.x - (center.x - this.transform.x) * ratio;
     this.transform.y = center.y - (center.y - this.transform.y) * ratio;
     this.transform.scale = scale;
+    this.clampTransform();
     this.applyTransform();
   }
 
@@ -205,6 +234,7 @@ export class MapController {
     this.transform.scale = Math.max(this.transform.scale, this.fitScale * 1.15);
     this.transform.x = center.x - x * this.transform.scale;
     this.transform.y = center.y - y * this.transform.scale;
+    this.clampTransform();
     this.applyTransform();
   }
 
