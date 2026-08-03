@@ -1,0 +1,42 @@
+body {
+  background: var(--bg);
+  color: var(--text);
+  overflow: hidden;
+}
+
+.app-shell {
+  width: 100dvw;
+  max-width: 100dvw;
+  height: 100dvh;
+  max-height: 100dvh;
+  min-height: 100dvh;
+  display: grid;
+  grid-template-rows: auto auto 1fr;
+  overflow: hidden;
+}
+
+.app-header {
+  display: block;
+  max-height: min(40dvh, 300px);
+  padding: max(clamp(0.6rem, 2vw, 1rem), env(safe-area-inset-top)) max(clamp(0.65rem, 2.5vw, 1rem), env(safe-area-inset-right)) clamp(0.55rem, 2vw, 0.75rem) max(clamp(0.65rem, 2.5vw, 1rem), env(safe-area-inset-left));
+  background: var(--surface);
+  color: white;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.header-main { display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
+.header-actions { display: flex; align-items: center; gap: 0.5rem; }
+
+.eyebrow { margin: 0 0 0.15rem; font-size: clamp(0.65rem, 2.2vw, 0.76rem); opacity: 0.72; text-transform: uppercase; letter-spacing: 0.08em; }
+h1 { margin: 0; font-size: clamp(1.05rem, 4vw, 1.35rem); letter-spacing: -0.02em; }
+
+.search-panel {
+  width: 100%;
+  min-width: 0;
+  padding: clamp(0.45rem, 2vw, 0.75rem) max(clamp(0.65rem, 2.5vw, 1rem), env(safe-area-inset-right)) clamp(0.45rem, 2vw, 0.75rem) max(clamp(0.65rem, 2.5vw, 1rem), env(safe-area-inset-left));
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.map-section { position: relative; width: 100%; height: 100%; min-width: 0; min-height: 0; overflow: hidden; }

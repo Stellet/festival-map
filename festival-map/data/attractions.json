@@ -1,0 +1,12 @@
+[
+  {"id":"main-stage","name":"Palco Principal","category":"stages","description":"Shows principais e cerimônia de encerramento.","accessible":true,"x":700,"y":140,"navigationNodeId":"main-stage","schedule":"14h às 23h"},
+  {"id":"alternative-stage","name":"Palco Alternativo","category":"stages","description":"Bandas independentes, DJs e apresentações experimentais.","accessible":true,"x":545,"y":365,"navigationNodeId":"tech-experience","schedule":"15h às 22h"},
+  {"id":"food-court","name":"Praça de Alimentação","category":"food","description":"Restaurantes, food trucks, bebidas e mesas cobertas.","accessible":true,"x":335,"y":640,"navigationNodeId":"culture-food","schedule":"12h às 23h"},
+  {"id":"restrooms","name":"Banheiros","category":"restrooms","description":"Banheiros comuns e cabines acessíveis.","accessible":true,"x":600,"y":520,"navigationNodeId":"cross-center","schedule":"Durante todo o evento"},
+  {"id":"medical","name":"Posto Médico","category":"services","description":"Atendimento de primeiros socorros e apoio emergencial.","accessible":true,"x":310,"y":445,"navigationNodeId":"culture-medical","schedule":"Durante todo o evento"},
+  {"id":"kids-area","name":"Área Infantil","category":"activities","description":"Brinquedos, oficinas e atividades acompanhadas.","accessible":true,"x":825,"y":590,"navigationNodeId":"art-kids","schedule":"12h às 20h"},
+  {"id":"exhibitors","name":"Feira de Expositores","category":"activities","description":"Lojas, artistas, projetos independentes e parceiros.","accessible":true,"x":430,"y":570,"navigationNodeId":"tech-exhibitors","schedule":"12h às 21h"},
+  {"id":"main-entrance","name":"Entrada Principal","category":"access","description":"Credenciamento, revista e informações gerais.","accessible":true,"x":600,"y":720,"navigationNodeId":"entrance","schedule":"A partir de 11h"},
+  {"id":"emergency-exit","name":"Saída de Emergência","category":"access","description":"Uso exclusivo em evacuação ou orientação da equipe.","accessible":true,"x":1030,"y":690,"navigationNodeId":"emergency-exit","schedule":"Sempre disponível"},
+  {"id":"you-are-here","name":"Você está aqui","category":"location","description":"Ponto inicial utilizado para as rotas desta demonstração.","accessible":true,"x":820,"y":400,"navigationNodeId":"art-interactive","schedule":null}
+]
