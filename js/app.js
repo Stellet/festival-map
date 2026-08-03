@@ -1,15 +1,15 @@
-import { loadAttractions, getCategories } from './attractions.js';
+import { loadAttractions, POINT_TYPES, getTypesInState } from './attractions.js';
 import { MapController } from './map-controller.js';
 import {
   navigationNodes, navigationEdges, findNearestNavigationNode, findShortestPath,
   updateNavigationNode, updateNavigationEdge, exportNavigationMesh,
   drawRoute, clearRoute, renderNavigationGraph, renderCirculationPaths
 } from './navigation.js';
-import { createFilters, openDetails, closeDetails } from './ui.js';
+import { renderTypeFilters, openDetails, closeDetails } from './ui.js';
 
 const APP_VERSION = {
-  number: '0.1.15',
-  updatedAt: '02/08/2026 · 23:43'
+  number: '0.1.16',
+  updatedAt: '03/08/2026 · 00:08'
 };
 
 let debugMode = new URLSearchParams(window.location.search).get('debug') === 'true';
@@ -24,7 +24,7 @@ const mapController = new MapController(viewport);
 let attractions = [];
 let selectedAttraction = null;
 let svgDocument = null;
-let activeCategory = 'all';
+let activeType = 'all';
 let mapIsBound = false;
 let debugSelection = null;
 let debugDrag = null;
@@ -39,17 +39,7 @@ const MARKER_COLORS = {
   'main-entrance': '#2c9b64', 'emergency-exit': '#fb7185', 'you-are-here': '#172033'
 };
 
-const ATTRACTION_TYPES = [
-  { id: 'stage', label: 'Palco', icon: '★', category: 'stages', description: 'Programação artística e apresentações ao vivo.', color: '#8b5cf6' },
-  { id: 'food', label: 'Alimentação', icon: 'F', category: 'food', description: 'Espaço com opções de alimentação e bebidas.', color: '#d99f08' },
-  { id: 'restroom', label: 'Banheiro', icon: 'WC', category: 'services', description: 'Banheiros disponíveis para o público.', color: '#168db5' },
-  { id: 'health', label: 'Saúde', icon: '+', category: 'services', description: 'Ponto de apoio e atendimento de saúde.', color: '#e25555' },
-  { id: 'information', label: 'Informação', icon: 'i', category: 'services', description: 'Ponto de informações e orientação do festival.', color: '#22d3ee' },
-  { id: 'exhibition', label: 'Exposição', icon: '◇', category: 'exhibitions', description: 'Espaço dedicado a exposições e obras.', color: '#0e9f9a' },
-  { id: 'activity', label: 'Atividade', icon: '◆', category: 'activities', description: 'Atividade interativa aberta ao público.', color: '#db4f8c' },
-  { id: 'entrance', label: 'Entrada', icon: 'E', category: 'access', description: 'Acesso de entrada do festival.', color: '#2c9b64' },
-  { id: 'exit', label: 'Saída', icon: 'S', category: 'access', description: 'Acesso de saída do festival.', color: '#fb7185' }
-];
+const EDITABLE_POINT_TYPES = POINT_TYPES.filter((type) => !type.system);
 
 function updateAttractionPosition(attraction) {
   const element = svgDocument.querySelector(`[data-attraction-id="${attraction.id}"]`);
@@ -66,7 +56,7 @@ function calculateActiveRoute() {
   const shortestPath = findShortestPath(currentLocationNodeId, activeDestination.navigationNodeId);
   if (!shortestPath) {
     clearRoute(svgDocument);
-    status.textContent = 'Não foi possível encontrar uma rota até esta atração.';
+    status.textContent = 'Não foi possível encontrar uma rota até este ponto de interesse.';
     return;
   }
   drawRoute(svgDocument, shortestPath);
@@ -115,7 +105,7 @@ function refreshAttractionList() {
   list.replaceChildren();
   const placeholder = document.createElement('option');
   placeholder.value = '';
-  placeholder.textContent = 'Selecione uma atração';
+  placeholder.textContent = 'Selecione um ponto';
   list.appendChild(placeholder);
   attractions.forEach((attraction) => {
     const option = document.createElement('option');
@@ -313,7 +303,7 @@ function initializeAttractionDropCreator() {
   const nameInput = document.querySelector('#debugName');
   const message = document.querySelector('#debugStatus');
 
-  ATTRACTION_TYPES.forEach((type) => {
+  EDITABLE_POINT_TYPES.forEach((type) => {
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'debug-type';
@@ -360,6 +350,7 @@ function initializeAttractionDropCreator() {
           id: `custom-${Date.now()}`,
           name,
           description: type.description,
+          type: type.id,
           icon: type.icon,
           color: type.color,
           category: type.category,
@@ -372,9 +363,10 @@ function initializeAttractionDropCreator() {
         attractions.push(attraction);
         createAttractionElement(attraction);
         refreshAttractionList();
+        refreshTypeFilters();
         selectDebugAttraction(attraction);
         nameInput.value = '';
-        message.textContent = `${attraction.name} adicionada.`;
+        message.textContent = `${attraction.name} adicionado.`;
       };
       const cancel = (pointerEvent) => {
         button.removeEventListener('pointermove', moveGhost);
@@ -470,8 +462,9 @@ function initializeEditor(svgRoot) {
     clearRoute(svgDocument);
     debugSelection = null;
     refreshAttractionList();
+    refreshTypeFilters();
     selectDebugAttraction(null);
-    document.querySelector('#debugStatus').textContent = 'Atração excluída.';
+    document.querySelector('#debugStatus').textContent = 'Ponto de interesse excluído.';
   });
 
   document.querySelector('#debugCopyMesh').addEventListener('click', async () => {
@@ -530,20 +523,27 @@ function setupMap() {
 function applyVisibility() {
   const query = searchInput.value.trim().toLowerCase();
   attractions.forEach((attraction) => {
-    const matchesCategory = activeCategory === 'all' || attraction.category === activeCategory || attraction.id === 'you-are-here';
+    const matchesType = activeType === 'all' || attraction.type === activeType || attraction.id === 'you-are-here';
     const matchesSearch = !query || `${attraction.name} ${attraction.description}`.toLowerCase().includes(query);
-    svgDocument.querySelector(`[data-id="${attraction.id}"]`)?.classList.toggle('hidden', !(matchesCategory && matchesSearch));
+    svgDocument.querySelector(`[data-id="${attraction.id}"]`)?.classList.toggle('hidden', !(matchesType && matchesSearch));
   });
+}
+
+function refreshTypeFilters() {
+  const availableTypes = getTypesInState(attractions);
+  if (activeType !== 'all' && !availableTypes.some((type) => type.id === activeType)) activeType = 'all';
+  renderTypeFilters(document.querySelector('#filterList'), availableTypes, activeType, (type) => {
+    activeType = type;
+    applyVisibility();
+  });
+  if (svgDocument) applyVisibility();
 }
 
 async function init() {
   document.querySelector('#app-version').textContent = `v${APP_VERSION.number} · ${APP_VERSION.updatedAt}`;
   attractions = await loadAttractions();
   currentLocationNodeId = attractions.find((item) => item.id === 'you-are-here')?.navigationNodeId ?? null;
-  createFilters(document.querySelector('#filterList'), getCategories(), (category) => {
-    activeCategory = category;
-    applyVisibility();
-  });
+  refreshTypeFilters();
 
   mapObject.addEventListener('load', setupMap);
   setupMap();

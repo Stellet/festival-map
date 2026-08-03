@@ -26,13 +26,13 @@
       </div>
       <section id="debugPanel" class="debug-panel" hidden>
         <div class="debug-heading">
-          <h2>Inserir atração</h2>
+          <h2>Inserir ponto de interesse</h2>
           <button id="debugCollapse" type="button" aria-expanded="true">Recolher</button>
         </div>
-        <label>Nome<input id="debugName" type="text" placeholder="Nome da atração" /></label>
-        <div id="debugTypeList" class="debug-type-list" aria-label="Tipos de atração"></div>
+        <label>Nome<input id="debugName" type="text" placeholder="Nome do ponto de interesse" /></label>
+        <div id="debugTypeList" class="debug-type-list" aria-label="Tipos de ponto de interesse"></div>
         <p class="debug-hint">Arraste um tipo até o mapa para criar.</p>
-        <label>Atração selecionada<select id="debugAttractionList"></select></label>
+        <label>Ponto selecionado<select id="debugAttractionList"></select></label>
         <div class="debug-actions">
           <button id="debugDelete" type="button">Excluir</button>
         </div>
@@ -56,7 +56,7 @@
     <section class="search-panel" aria-label="Busca e filtros">
       <label class="search-box">
         <span aria-hidden="true">⌕</span>
-        <input id="searchInput" type="search" placeholder="Buscar atração ou serviço" autocomplete="off" />
+        <input id="searchInput" type="search" placeholder="Buscar ponto de interesse" autocomplete="off" />
       </label>
       <div id="filterList" class="filter-list" role="list"></div>
     </section>
@@ -74,7 +74,7 @@
         <button id="clearRouteButton" class="clear-route-button" type="button">Limpar rota</button>
       </div>
 
-      <p id="mapStatus" class="map-status" aria-live="polite">Toque em uma atração para ver detalhes.</p>
+      <p id="mapStatus" class="map-status" aria-live="polite">Toque em um ponto de interesse para ver detalhes.</p>
     </main>
 
     <aside id="detailSheet" class="detail-sheet" aria-hidden="true">

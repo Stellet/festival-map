@@ -1,17 +1,24 @@
-export function createFilters(container, categories, onSelect) {
-  categories.forEach((category, index) => {
+export function renderTypeFilters(container, types, activeType, onSelect) {
+  container.replaceChildren();
+  const filters = [{ id: 'all', filterLabel: 'Todos' }, ...types];
+  filters.forEach((type) => {
     const button = document.createElement('button');
     button.type = 'button';
-    button.className = `filter-chip${index === 0 ? ' is-active' : ''}`;
-    button.textContent = category.label;
-    button.dataset.category = category.id;
+    button.className = `filter-chip${type.id === activeType ? ' is-active' : ''}`;
+    button.textContent = type.filterLabel;
+    button.dataset.type = type.id;
     button.addEventListener('click', () => {
       container.querySelectorAll('.filter-chip').forEach((item) => item.classList.remove('is-active'));
       button.classList.add('is-active');
-      onSelect(category.id);
+      onSelect(type.id);
     });
     container.appendChild(button);
   });
+}
+
+// Compatibilidade com chamadas externas anteriores.
+export function createFilters(container, categories, onSelect) {
+  renderTypeFilters(container, categories.map(({ id, label }) => ({ id, filterLabel: label })), 'all', onSelect);
 }
 
 export function openDetails(sheet, attraction) {
